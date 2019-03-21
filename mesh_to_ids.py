@@ -1,8 +1,8 @@
-# mesh_to_ids.py
-# E Flynn
-# 2/27/2019
+# grab mesh ID info
 #
-# Grab info associated with a MeSH ID.
+# we want CAS, synonym, UNII
+
+
 
 from selenium import webdriver
 from bs4 import BeautifulSoup
@@ -17,7 +17,8 @@ options = webdriver.ChromeOptions()
 options.add_argument('headless')
 mesh_id_to_info = {}
 
-with open("data/list_mesh.txt", 'r') as f:
+#with open("data/list_mesh.txt", 'r') as f:
+with open("data/mesh_to_download.txt", 'r') as f:
 	lines = f.readlines()
 
 list_mesh_ids = [line.strip() for line in lines]
@@ -58,7 +59,7 @@ for mesh_id in list_mesh_ids:
 	mesh_id_to_info[mesh_id]=mesh_info
 		# write this out
 
-with open("data/mesh_info.json", 'w') as f:
+with open("data/mesh_info2.json", 'w') as f:
 	mesh_str = json.dumps(mesh_id_to_info)
 	f.write(mesh_str)
 

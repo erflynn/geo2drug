@@ -1,0 +1,1 @@
+# The goal of this is to download and look at all of the GDSs

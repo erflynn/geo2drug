@@ -17,14 +17,15 @@ con <- dbConnect(SQLite(),'../../drug_expression/dataset_identification/GEOmetad
 
 # TaxonID = 9606
 res <- dbGetQuery(con, "SELECT gse.gse, gpl.gpl, organism, pubmed_id FROM gse JOIN gse_gpl on gse.gse = gse_gpl.gse JOIN gpl ON gse_gpl.gpl=gpl.gpl")
-res2 <- filter(res, organism=="Homo sapiens")
-res3 <- filter(res2, !is.na(pubmed_id))
-length(unique(res3$gse)) # 16904
-pubmed_ids <- unique(res3$pubmed_id) # 12576
+res2 <- separate_rows(res, organism, sep=";\t")
+human_data <- filter(res2, organism=="Homo sapiens")
+res3 <- filter(human_data, !is.na(pubmed_id))
+length(unique(res3$gse)) # 17243
+pubmed_ids <- unique(res3$pubmed_id) # 12816
 
 gse_to_pubmed <- res3[!duplicated(res3[,c("gse", "pubmed_id")]),c("gse", "pubmed_id")]
-head(gse_to_pubmed)
 gse_to_pubmed <- rename(gse_to_pubmed, PMID=pubmed_id)
+
 # read in all the pubtator chemical data
 pubtator <- read.delim("../../drug_expression/drug_labeling/external_data/chemical2pubtator", stringsAsFactors = FALSE)
 head(pubtator)
@@ -269,7 +270,7 @@ head(mapping_tab6)
 # 
 # require('rjson')
 # 
-# pmid_to_mesh <- fromJSON(file="pmid_to_mesh.json") # 11771, 1491
+# pmid_to_mesh <- fromJSON(file="data/pmid_to_mesh.json") # 11771, 1491
 # mesh_ids <- unique(unlist(pmid_to_mesh))
 # chemical_mesh <- mesh_ids[sapply(mesh_ids, function(x) substr(x, 1, 1)=="D")] # 1494
 # 

@@ -16,7 +16,7 @@ gse_mesh_db <- full_join(gse_mesh, mapping_tab6, by="MeSH")
 head(gse_mesh_db)
 
 # add drugbank names + ATC codes
-drugbank <- fromJSON(file="drugbank_info.json") 
+drugbank <- fromJSON(file="data/drugbank_info.json") 
 drugbank_df <- do.call(rbind,
                        lapply(drugbank, function(x) data.frame(
                          lapply(x[c("synonyms","unii","name","cas","dbID","chebi" , "ATC")], 
@@ -56,10 +56,12 @@ head(atc_info)
 atc_info$descript <- factor(atc_info$descript, atc_info$descript)
 ggplot(atc_info, aes(x=class, y=count, fill=descript))+geom_histogram(stat="identity")+ggtitle("ATC breakdown")
 
-gse_w_study_info <- left_join(gse_mesh_db2, count.per.study)
+gse_w_study_info <- left_join(gse_mesh_db2, count.per.study) # TODO not in this file
 head(gse_w_study_info)
 gse_w_study_info$class <- sapply(gse_w_study_info$ATC, function(x) ifelse(x=="", NA, substr(x, 1, 1)))
 gse_w_study_info2 <- left_join(gse_w_study_info, atc_names)
+
+write.csv(gse_w_study_info2, "data/gse_w_study_info_0207.csv", row.names=FALSE, quote=TRUE)
 ggplot(filter(gse_w_study_info2, !is.na(study_type) & !is.na(descript)), aes(x=class, fill=descript))+geom_histogram(stat="count")+ggtitle("ATC breakdown")+facet_grid(study_type ~ .)+theme(text = element_text(size=20))
 head(data.frame("count"=summary(as.factor(filter(gse_w_study_info2, study_type=="f")$name))), 10)
 head(data.frame("count"=summary(as.factor(filter(gse_w_study_info2, study_type=="m")$name))), 10)
@@ -108,48 +110,8 @@ year_counts <- filter(drug_w_date, !is.na(study_type)) %>% group_by(Year, study_
 ggplot(year_counts, aes(x=Year, y=num_per_year, fill=study_type)) + geom_histogram(stat="identity", position="dodge")+ylab("Number of studies per year")+theme(text = element_text(size=20))
 
 
-# what about the non-human data?
-#  GSE to MeSH to drugbank for these
-non_human <- filter(res,organism!="Homo sapiens" & !is.na(pubmed_id)) # 31,771
-length(unique(non_human$pubmed_id)) # 20,056
-length(unique(non_human$gse)) # 26,978
-
-pubtator <- read.delim("../../drug_expression/drug_labeling/external_data/chemical2pubtator", stringsAsFactors = FALSE)
-nonh_drug_pmids <- intersect(non_human$pubmed_id, pubtator$PMID)
-length(nonh_drug_pmids) # 6488 PMIDs with drug data
-pubtator_nonh <- filter(pubtator,PMID %in% nonh_drug_pmids)
-length(unique(pubtator_nonh$MeshID)) # 3022 mesh IDs
-
-# start mapping to drugbank
-pubtator_nonh$MeSH <- sapply(pubtator_nonh$MeshID, function(x) 
-{y <- strsplit(x, ":", fixed=TRUE)[[1]]; 
-return(y[[length(y)]])})
-head(pubtator_nonh)
-length(intersect(pubtator_nonh$MeSH, mapping_tab6$MeSH )) # at least 428 have DrugBank IDs
-# TODO:
-# - finish map to drugbank
 
 
-# counts
-non_h_pmid_df <- filter(non_human, pubmed_id %in% nonh_drug_pmids)
-length(unique(non_h_pmid_df$gse)) # 8159 GSEs
-
-org_breakdown <- table(non_h_pmid_df$organism)
-head(org_breakdown[order(-org_breakdown)], 30)
-org_breakdown <- data.frame(org_breakdown[order(-org_breakdown)])
-head(org_breakdown, 15)
-# TODO 
-# - some studies have human + other - need to make sure we are getting these!
-
-
-# TODO
-# - how does this relate to year?
-# ideas:
-#  (are there any drugs with interesting trends?)
-head(non_h_pmid_df)
-non_h_pmid_df2 <- rename(non_h_pmid_df, "PMID"="pubmed_id")
-nonh_mapped <- inner_join(non_h_pmid_df2, pubtator_nonh)
-nonh_mapped2 <- left_join(nonh_mapped, mapping_tab6)
 
 
 # TODO

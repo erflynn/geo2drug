@@ -1,7 +1,7 @@
 
-geo2drug
-E Flynn
-Last updated: 3/5/2019
+### geo2drug
+### E Flynn
+### Last updated: 3/5/2019
 
 The code in this repository is used for mapping GEO datasets to drugs (using DrugBank IDs or other).
 
