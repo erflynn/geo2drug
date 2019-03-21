@@ -6,25 +6,28 @@
 #  - what is the sex breakdown? how many have sex labels?
 #     - of these, what is the pattern?
 #  - what is the tissue breakdown
-#
 
 require('tidyverse')
 require('GEOmetadb')
 options(stringsAsFactors=FALSE)
 
 
+# --- load relevant data --- #
+
+# text-based labels
 ale_data <- read.csv("../../drug_expression/drug_labeling/ale_processing/ale_combined_data.csv")
+
+# gse to mesh data
 mapping_tab6 <-read.table("data/mesh_db_mapping_0302.txt", header=TRUE)
-
 gse_mesh <- read.delim("data/gse_to_mesh.txt", header=TRUE)
-
 gse_mesh_db <- full_join(gse_mesh, mapping_tab6, by="MeSH")
 head(gse_mesh_db)
 
-
+# expression-based labels
 label_mat <- read.csv("data/label_mat.csv")
 label_mat <- rename(label_mat, "gsm" ="X")
 
+# combine
 comb_labels <- left_join(label_mat, select(ale_data, c("gsm", "gse", "gpl", "text_sex", "text_tissue_name", "cell_line")))          
 length(unique(comb_labels$gse)) # 1993
 table(comb_labels$rank_sex) # 100,831
@@ -44,7 +47,7 @@ table(comb_labels$text_sex)
 #         F     M 
 # 44149 17062 18597 
 
-# make a bar chart
+# --- Make a bar chart of the sex breakdown --- #
 sex_lab_present <- filter(comb_labels, text_sex %in% c("F", "M"))
 sex_lab_present$text_sex <- ifelse(sex_lab_present$text_sex=="M", "male", "female") # fix this
 length(unique(sex_lab_present$gse)) # 613 (1380 did not label)
@@ -54,6 +57,7 @@ length(unique(sex_lab_present$gse)) # 613 (1380 did not label)
 num_studies <- length(unique(comb_labels$gse))
 
 getSexLabStats <- function(df){
+  # function to get stats of numbers m,f for a particular study 
   count.per.study <- df %>% group_by(gse) %>% summarize(num_f=sum(sexlab=="female"), num_m=sum(sexlab=="male"))
   m.only <- filter(count.per.study, num_f==0)
   f.only <- filter(count.per.study, num_m==0)
@@ -85,7 +89,7 @@ ggplot(melted.tab, aes(x=method, y=value, fill=variable))+geom_bar(stat="identit
 
 
 
-# calculate the accuracy
+# ---- Calculate the accuracy ---- #
 
 table(sex_lab_present$text_sex==sex_lab_present$toker_sex)  
 # FALSE  TRUE 
@@ -107,8 +111,7 @@ table(mismatched$massir_sex==mismatched$rank_sex) # 3069/5206 = 61.1%
 table(mismatched$toker_sex==mismatched$rank_sex) # 1214/2145 = 56.5%
 
 
-# TODO tissue breakdown of data --> make a chart
-
+# ---- Plot tissue break down of data ---- #
 tiss_dat <- comb_labels %>% group_by(gse) %>% summarize(common_tiss=names(which.max(table(tissue))))
 ggplot(tiss_dat, aes(x=common_tiss, fill=common_tiss))+geom_histogram(stat="count")+xlab("Tissue breakdown")+ylab("Number of studies")+theme(text = element_text(size=20))
 
@@ -121,14 +124,10 @@ mixed.sex <- filter(count.per.study, num_m!=0, num_f!=0)
 count.per.study$study_type <- ifelse(count.per.study$num_f==0, "m", ifelse(count.per.study$num_m==0, "f", "both"))
 study_tiss_count <- left_join(count.per.study, tiss_dat)
 
-# TODO - filter by cell line --> redo :/ 
-#    does the "accuracy" improve?
-#    what does it look like?
-
+# quick cell line filter
 study_cell_line <- comb_labels %>% group_by(gse) %>% summarize(cell_line=any(cell_line))
 table(study_cell_line$cell_line)
-non_cell_line <- filter(study_cell_line, cell_line != "TRUE")$gse
-# TODO - this doesn't really appear to be accurate :/ 
+non_cell_line <- filter(study_cell_line, cell_line != "TRUE")$gse # this is not v accurate --> follow up w labels
 
 # group by study type 
 study_tab <-study_tiss_count[,c("gse", "study_type", "common_tiss")]
@@ -141,13 +140,8 @@ chisq.p[chisq.p < 0.05/ncol(count_table)]
 ggplot(filter(study_tiss_count, !is.na(study_type) & study_tiss_count$gse %in% non_cell_line), aes(x=common_tiss, fill=common_tiss))+
   geom_histogram(stat="count")+xlab("Tissue breakdown")+ylab("Number of studies")+theme(text = element_text(size=20))+facet_grid(study_type ~ .)
 
+# look at a couple problematic studies
 left_join(filter(study_tiss_count, common_tiss=="Prostate" & study_type=="f" & gse %in% non_cell_line), comb_labels)
 left_join(filter(study_tiss_count, common_tiss=="Breast" & study_type=="m"), comb_labels)
 
 
-# TODO plot how does this relate to drugs
-
-# TODO single sex studies by drug class
-
-# TODO what are the drugs in single sex vs multi sex studies
-#     does this make sense?

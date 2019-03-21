@@ -8,20 +8,22 @@
 
 require('tidyverse')
 require('rjson')
+require('ggplot2')
+require('GEOmetadb')
+require('gplots')
+
+
 mapping_tab6 <-read.table("data/mesh_db_mapping_0302.txt", header=TRUE)
-
 gse_mesh <- read.delim("data/gse_to_mesh.txt", header=TRUE)
-
 gse_mesh_db <- full_join(gse_mesh, mapping_tab6, by="MeSH")
 head(gse_mesh_db)
 
 # add drugbank names + ATC codes
-drugbank <- fromJSON(file="data/drugbank_info.json") 
+drugbank <- fromJSON(file="data/db_data/drugbank_info.json") 
 drugbank_df <- do.call(rbind,
                        lapply(drugbank, function(x) data.frame(
                          lapply(x[c("synonyms","unii","name","cas","dbID","chebi" , "ATC")], 
                                 function(y) paste(y, collapse=" | ")), stringsAsFactors=FALSE)))
-
 
 # what are the most frequent drugs?
 name_df <- drugbank_df[,c("dbID", "name", "ATC")]
@@ -31,7 +33,6 @@ gse_mesh_db2 <- gse_mesh_db_n[!is.na(gse_mesh_db_n$db_id),]
 gse_mesh_db_na <- gse_mesh_db_n[is.na(gse_mesh_db_n$db_id),]
 drug.counts <- table(as.factor(gse_mesh_db2$name))
 head(drug.counts[order(-drug.counts)], 30)
-require('ggplot2')
 gse_mesh_db2$name <- factor(gse_mesh_db2$name, names(drug.counts)[order(-drug.counts)])
 ggplot(gse_mesh_db2, aes(name)) + geom_histogram(stat="count", bins=30)+
   ylab("Number of GSEs")+ggtitle("Distribution of drug frequencies in GEO Studies")+
@@ -72,7 +73,7 @@ atc_tiss <- left_join(atc_tiss, atc_info[,c("class", "descript")])
 atc_tiss2 <-filter( atc_tiss, class != "L")
 tiss_class <- table(atc_tiss2[,c("descript", "common_tiss")])
 tiss_class/rowSums(tiss_class)
-require('gplots')
+
 heatmap.2(tiss_class, col=colorRampPalette(c("white", "blue", "darkblue"))(n=500),  
           Rowv=FALSE, Colv=FALSE, trace="none", 
           margins=c(6,22))
@@ -82,6 +83,7 @@ filter(atc_tiss, class=="V" & common_tiss=="Muscle" & !is.na(gse))
 table(inner_join(gse_w_study_info2[gse_w_study_info2$name=="Estradiol",], study_tiss_count)[,c("study_type", "common_tiss")])
 table(inner_join(gse_w_study_info2[gse_w_study_info2$name=="Fluorouracil",], study_tiss_count)[,c("study_type", "common_tiss")])
 
+# look at a couple patterns 
 filter(atc_tiss, name=="Fluorouracil")
 select(filter(atc_tiss, name=="Doxorubicin"), c("gse", "PMID", "MeshID", "name", "num_f", "num_m", "study_type", "common_tiss"))
 table(filter(atc_tiss, name=="Doxorubicin")[,c("study_type", "common_tiss")])
@@ -93,7 +95,6 @@ chisq.p <- lapply(colnames(count_table), function(x)
 names(chisq.p) <- colnames(count_table)
 chisq.p[chisq.p < 0.05/ncol(count_table)]
 
-require('GEOmetadb')
 con <- dbConnect(SQLite(),'../../drug_expression/dataset_identification/GEOmetadb.sqlite') 
 res <- dbGetQuery(con, "SELECT gse.gse, gpl.gpl, organism, pubmed_id, gse.submission_date FROM gse JOIN gse_gpl on gse.gse = gse_gpl.gse JOIN gpl ON gse_gpl.gpl=gpl.gpl")
 res2 <- filter(res, organism=="Homo sapiens")
@@ -108,16 +109,6 @@ drug_w_date$Year <-as.Date(cut(as.Date(drug_w_date$submission_date), breaks = "y
 year_counts <- filter(drug_w_date, !is.na(study_type)) %>% group_by(Year, study_type) %>% summarize(num_per_year=n())
 
 ggplot(year_counts, aes(x=Year, y=num_per_year, fill=study_type)) + geom_histogram(stat="identity", position="dodge")+ylab("Number of studies per year")+theme(text = element_text(size=20))
-
-
-
-
-
-
-# TODO
-# - how does it overlap with other data?
-#  - manual data from CREEDS, the BROAD
-
 
 
 

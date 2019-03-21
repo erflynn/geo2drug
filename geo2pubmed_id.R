@@ -3,81 +3,94 @@
 # 2/28/2019
 #
 # Code for mapping GEO IDs to DrugBank IDs:
-#  Uses Pubtator + MESH Ids to accomplish the mapping.
-#
+#  Uses Pubtator + MESH Ids and DrugBank data to accomplish the mapping.
+# 
 # End result: GSE, DrugBank ID list
 #  DrugBank, ATC
+#
+# Data files:
+#    chemical2pubtator
+#
+# TODO:
+#  - update so that this works with PUBMED MESH directly!
+
 
 require('tidyverse')
 require('GEOmetadb')
 require('meshr')
 require('rjson')
 
+# --- get list of human GSEs, PMIDs ---- #
 con <- dbConnect(SQLite(),'../../drug_expression/dataset_identification/GEOmetadb.sqlite') 
-
-# TaxonID = 9606
 res <- dbGetQuery(con, "SELECT gse.gse, gpl.gpl, organism, pubmed_id FROM gse JOIN gse_gpl on gse.gse = gse_gpl.gse JOIN gpl ON gse_gpl.gpl=gpl.gpl")
 res2 <- separate_rows(res, organism, sep=";\t")
 human_data <- filter(res2, organism=="Homo sapiens")
-res3 <- filter(human_data, !is.na(pubmed_id))
-length(unique(res3$gse)) # 17243
-pubmed_ids <- unique(res3$pubmed_id) # 12816
+res3 <- filter(human_data, !is.na(pubmed_id)) # 17243 unique GSEs
+pubmed_ids <- unique(res3$pubmed_id) # 12816 PMIDs
 
+# --- generate XML commands file --- #
+# sink("xml_comamnds.sh")
+# sapply(1:13, function(idx){
+#   pubmed_st <- paste(pubmed_ids[((idx-1)*1000+1):(idx*1000)], collapse=",")
+#   cat(sprintf("efetch -format xml -db pubmed -id \"%s\" > pubmed_%s.xml", pubmed_st, idx))
+#   cat("\n")
+#   })
+# 
+# sink()
+
+# create a GSE to pubmed mapping vector
 gse_to_pubmed <- res3[!duplicated(res3[,c("gse", "pubmed_id")]),c("gse", "pubmed_id")]
 gse_to_pubmed <- rename(gse_to_pubmed, PMID=pubmed_id)
 
-# read in all the pubtator chemical data
+# --- add MeSH ---- #
+# read in all the pubtator chemical data, filter by IDs that are associated with a human ID
 pubtator <- read.delim("../../drug_expression/drug_labeling/external_data/chemical2pubtator", stringsAsFactors = FALSE)
-head(pubtator)
 
 pubtator_gse <- pubtator[pubtator$PMID %in% pubmed_ids,] # 6654
 length(unique(pubtator_gse$MeshID)) # 1800
+
+# fix the MeSH format which is currently MESH:<mesh_id> --> mesh_id
 pubtator_gse$MeSH <- sapply(pubtator_gse$MeshID, function(x) 
   {y <- strsplit(x, ":", fixed=TRUE)[[1]]; 
-  return(y[[length(y)]])})
+  return(y[[length(y)]])}) # grabs the last in case there are multiple
 
 
-# condense the mapping to mentions
-mesh_to_mention <- select(pubtator_gse, c("MeSH", "Mentions"))
-mesh_to_mention <- mesh_to_mention[!duplicated(mesh_to_mention),]
-
-collapsed_mesh <- mesh_to_mention %>% group_by(MeSH) %>% 
-  summarise(mention_str=paste(unique(unlist(lapply(Mentions, function(x) tolower(strsplit(x, "\\|")[[1]])))), collapse="|"))
-
-# could collapse further w removing quotes, . , etc
-write.table(data.frame(collapsed_mesh$MeSH), file="data/list_mesh.txt", row.names=FALSE, col.names=FALSE, quote=FALSE, sep="\t")
-
-# alternate <-- select the most common
-mesh_labeled_common <- mesh_to_mention %>% group_by(MeSH) %>% summarise(most_common=names(which.max(table(unlist(lapply(Mentions, function(x) tolower(strsplit(x, "\\|")[[1]])))))))
-
-# filter chebi vs mesh entries
-chebi_entries <- sapply(pubtator_gse$MeshID, function(x) strsplit(x, ":")[[1]][[1]]=="CHEBI")
-chebi <- pubtator_gse[chebi_entries,] #  275 unique
-mesh <-pubtator_gse[!chebi_entries,] #1525 unique
-
-length(unique(pubtator_gse$PMID)) # 3587
-
+# link GSE to MESH and write this out
 gse_to_mesh <- right_join(gse_to_pubmed, pubtator_gse, by="PMID") # 8655
-length(unique(gse_to_mesh$gse)) # 4706 GSEs - should I download ALL of these? 
+length(unique(gse_to_mesh$gse)) # 4706 GSEs 
 length(unique(gse_to_mesh$Mentions)) # 2468
 write.table(gse_to_mesh, file="data/gse_to_mesh.txt", row.names=FALSE, quote=FALSE, sep="\t")
 write.table(data.frame(unique(gse_to_mesh$gse)), file="data/gse_w_drug_mesh.txt", row.names=FALSE, col.names=FALSE, sep="\t")
+
+
+# condense data where multiple mentions correspond to the same MeSH ID
+mesh_to_mention <- select(pubtator_gse, c("MeSH", "Mentions"))
+mesh_to_mention <- mesh_to_mention[!duplicated(mesh_to_mention),]
+collapsed_mesh <- mesh_to_mention %>% group_by(MeSH) %>% 
+  summarise(mention_str=paste(unique(unlist(lapply(Mentions, function(x) tolower(strsplit(x, "\\|")[[1]])))), collapse="|"))
+write.table(data.frame(collapsed_mesh$MeSH), file="data/list_mesh.txt", row.names=FALSE, col.names=FALSE, quote=FALSE, sep="\t")
+# note: could collapse further w removing quotes, . , etc
+
+# select the most common mention label per MeSH, this provides an intuitive way to condense!
+mesh_labeled_common <- mesh_to_mention %>% group_by(MeSH) %>% 
+  summarise(most_common=names(which.max(table(unlist(lapply(Mentions, function(x) tolower(strsplit(x, "\\|")[[1]])))))))
+
+# there are also some CHEBI entries - separate these out
+chebi_entries <- sapply(pubtator_gse$MeshID, function(x) strsplit(x, ":")[[1]][[1]]=="CHEBI")
+chebi <- pubtator_gse[chebi_entries,] #  275 CHEBI
+mesh <-pubtator_gse[!chebi_entries,] #1525 MeSH
+
+
+
 ##### ----- START MAPPING ----- #####
 
-# Steps:
-#   MeSH, DrugBank ID (or other)
-#
-# Eventually:
-#   GSE, PMID, DrugBank IDs
 
-
-
-# MAP BY NAME 
-
+ 
+# 1. Map by NAME
 mentions <- separate_rows(collapsed_mesh, mention_str, sep="\\|")
 # TODO - double check chemical names are ok
 
-drugbank <- fromJSON(file="data/drugbank_info.json") 
+drugbank <- fromJSON(file="data/db_data/drugbank_info.json") 
 list.drugs <- lapply(drugbank, function(x) unique(unlist(tolower(c(x$synonyms, x$name)))))
 names(list.drugs) <- lapply(drugbank, function(y) y$dbID)
 drug.df <- data.frame("drug_names"=unlist(lapply(list.drugs, function(x) paste(x, collapse="|"))))
@@ -232,112 +245,13 @@ View(mesh_df_full[mesh_df_full$MeSH %in% list.unmapped.final,])
 
 mesh_unmapped <- mesh_df_full[mesh_df_full$MeSH %in% list.unmapped.final,]
 head(mesh_unmapped) # 942
-mesh_unmapped
-mesh_unmapped[mesh_unmapped$name=="Immunoferon",]
 
-# map these 6... then give up lol
+
+# map these 6... then give up for now
 new_mapping <- mesh_unmapped[(mesh_unmapped$registryNum %in% drugbank_df$cas),][,c("MeSH", "registryNum")]
 new_mapping <- rename(new_mapping, "cas"="registryNum")
 new_by_cas <- inner_join(new_mapping, drugbank_df[,c("cas", "dbID")],by="cas")
 new_by_cas <- rename(new_by_cas, "db_id"="dbID")
 mapping_tab6 <- rbind(mapping_tab5, new_by_cas[colnames(mapping_tab4)])
 write.table(mapping_tab6, file="data/mesh_db_mapping_0302.txt", row.names=FALSE, sep="\t", quote=FALSE) # 673 map
-head(mapping_tab6)
 
-##### ----------------------- ####
-##### ----------------------- ####
-##### ----------------------- ####
-
-##### ----------------------- OLD
-# 
-# 
-# ### ----  write out the commands for download with eutilities ---- ###
-# sink("xml_comamnds.sh")
-# sapply(1:13, function(idx){
-#   pubmed_st <- paste(pubmed_ids[((idx-1)*1000+1):(idx*1000)], collapse=",")
-#   cat(sprintf("efetch -format xml -db pubmed -id \"%s\" > pubmed_%s.xml", pubmed_st, idx))
-#   cat("\n")
-#   })
-# 
-# sink()
-# 
-# ### ---- end ---- ###
-# 
-# ### ---- use python to parse the XML ---- ###
-# # python parse_pubmed_xml.py
-# 
-# ### --- load the data --- ###
-# 
-# require('rjson')
-# 
-# pmid_to_mesh <- fromJSON(file="data/pmid_to_mesh.json") # 11771, 1491
-# mesh_ids <- unique(unlist(pmid_to_mesh))
-# chemical_mesh <- mesh_ids[sapply(mesh_ids, function(x) substr(x, 1, 1)=="D")] # 1494
-# 
-# 
-# 
-# pubtator$MeSH <- sapply(pubtator$MeshID, function(x) {y <- strsplit(as.character(x), ":", fixed=TRUE)[[1]]; ifelse(length(y)==2, y[[2]], y)})
-# 
-# filt_pubtator <- pubtator[pubtator$MeSH %in% chemical_mesh,]
-# list_mentions <- unique(filt_pubtator$Mentions)
-# 
-# # a lot of these don't appear to be unique - and many are multiple names sorted
-# length(unique(filt_pubtator$MeshID)) # only 233 of these
-# 
-# # --> COLLAPSE!
-# 
-# head(collapsed_mesh)
-# dim(collapsed_mesh)
-# 
-# # query for MESH
-# 
-# 
-# # map these to drugbank/ATC
-# drugbank <- fromJSON(file="drugbank_info.json") 
-# 
-# 
-# 
-# list.drugs <- lapply(drugbank, function(x) unique(unlist(tolower(c(x$synonyms, x$name)))))
-# names(list.drugs) <- lapply(drugbank, function(y) y$dbID)
-# 
-# 
-# 
-# intersect(unique(mesh_labeled_common$most_common), unlist(list.drugs)) # only 50 intersect out of 233 :(
-# setdiff(unique(mesh_labeled_common$most_common), unlist(list.drugs))
-# 
-# # try to map
-# 
-# head(res3)
-# head(pmid_to_mesh)
-# head(filt_pubtator) # pubtator filtered by the PMID to MESH list
-# # not sure this was the correct way to go...
-# # why did I do this additional mapping
-# # TODO - double check that these match!!
-# filt_pubtator$PMID <- sapply(filt_pubtator$PMID, as.character)
-# length(intersect(names(pmid_to_mesh), filt_pubtator$PMID)) # 754
-# length(names(pmid_to_mesh)) # 11,771
-# length(unique(filt_pubtator$PMID)) # 1,143,649
-# 
-# overlapping <- intersect(names(pmid_to_mesh), filt_pubtator$PMID)
-# missing <- setdiff(names(pmid_to_mesh), filt_pubtator$PMID)
-# 
-# 
-# 
-# # now filter the PUBMED mapping
-# # which have MESH IDs?
-# 
-# # MESH to ATCCC??? (or use UMLS)
-# 
-# 
-# # alternately - try to figure out how to map using names/synonyms to drugbank
-# #  I think this could actually work?
-# 
-# # write out a list of GEO to PMID to MESH ID
-# #  - start sex labeling all of these!
-# 
-# 
-# 
-# 
-# 
-# # write out a list of PMID to ATCCC
-# 

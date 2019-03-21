@@ -8,74 +8,70 @@
 
 require('tidyverse')
 
-# load the CREEDS data
+# ----- load the CREEDS data ----- #
 drug_pert_auto <- read.csv("../../drug_expression/drug_labeling/data/single_drug_perturbations-p1.0.csv", stringsAsFactors = FALSE)
-colnames(drug_pert_auto)
 drug_pert_auto$source <- "creeds_auto"
 
 drug_pert_manual <- read.csv("../../drug_expression/drug_labeling/data/single_drug_perturbations-v1.0.csv", stringsAsFactors = FALSE)
 drug_pert_manual$source <- "creeds_manual"
-rbind(select(drug_pert_manual, colnames(drug_pert)))
-creeds_gse <- unique(drug_pert_manual$geo_id, drug_pert_auto$geo_id) # 343
-# load the BROAD annotations
-broad_annot <- read.delim2("data/geo_phenotypes_n6470.txt")
-dim(broad_annot)
-length(unique(broad_annot$class_label))
+# note - the manual data has additional fields including the DrugBank ID
+# TODO - check overlap w drugbank IDs
 
+creeds_data <- rbind(select(drug_pert_manual, colnames(drug_pert_auto)), drug_pert_auto)
+creeds_gse <- unique(creeds_data$geo_id) # 343
+
+# ---- load the BROAD annotations ---- #
+broad_annot <- read.delim2("data/ref_data/geo_phenotypes_n6470.txt") # 193,370 samples
 broad_gse <- unique(broad_annot$series) # 1363
 
-# reformat this into a collapsed table of trt vs contol
-head(broad_annot)
+# reformat the BROAD annotations s.t. the GSMs for the perts/ctls follow a similar format to the CREEDS data
+pert_annot <- broad_annot %>% group_by(sig_id) %>% filter(class_id=="A") %>% summarise("GSE"=unique(series), pert_ids = paste(sample_id, collapse="|"), pert_label=paste(unique(class_label), collapse="|") )
+ctl_annot <- broad_annot %>% group_by(sig_id) %>% filter(class_id=="B") %>% summarise(ctl_ids = paste(sample_id, collapse="|"), ctl_label=paste(unique(class_label), collapse="|") )
+broad_comb_annot <- full_join(pert_annot, ctl_annot, by="sig_id")
+broad_comb_annot$source <- "broad_manual"
+dim(broad_comb_annot) # 6470 trt/ctl instances
+
+table(sapply(broad_comb_annot$GSE, function(x) str_detect(x, "GSE"))) # 58 are arrayExpress, 1305 are GSE
+
+# TODO - put together CREEDS and BROAD data
+# BROAD data doesn't have a "drug_name" field
 
 
-
-
-# count number of controls, treatments, sex label?
-length(intersect(broad_gse,creeds_gse)) # 61
-
-
-
-# load the annotations we put together
-mapping_tab6 <-read.table("data/mesh_db_mapping_0302.txt", header=TRUE)
+# ---- load the annotations we put together ---- #
+mesh_mapping_tab <-read.table("data/mesh_db_mapping_0302.txt", header=TRUE)
 gse_mesh <- read.delim("data/gse_to_mesh.txt", header=TRUE)
-gse_mesh_db <- full_join(gse_mesh, mapping_tab6, by="MeSH")
-head(gse_mesh_db)
-mesh_gse <- unique(gse_mesh_db$gse) # 4707
+gse_mesh_db <- full_join(gse_mesh, mesh_mapping_tab, by="MeSH")
 
+# collapse by study --> each study contains multiple mentions and their drugbank IDs
+#  doing this because we will be joining on the study
+gse_mesh_collapse <- select(gse_mesh_db, "gse", "Mentions", "db_id")
+gse_mesh_collapse <- gse_mesh_collapse %>% group_by(gse) %>% summarise("Mentions"=paste(Mentions, collapse="|"), "db_ids"=paste(db_id, collapse="|")) 
+mesh_gse <- gse_mesh_collapse$gse # 4707
+
+# what is the overlap at the GSE level
+overlap_c_b <- intersect(broad_gse,creeds_gse) # 61
 overlapping_b <- intersect(mesh_gse, broad_gse) # 359
 overlapping_c <- intersect(creeds_gse, mesh_gse) # 77
 
-# this is very little overlap - why are we getting so little?
+# Hmmm... this is very little overlap
 
 
-# look at an overlapping case 
-gse_likely_trt_ctl <- gse_mesh_db[gse_mesh_db$gse %in% union(overlapping_b, overlapping_c),]
-unique(gse_likely_trt_ctl$db_id)
+# look at annotations that overlap
+broad_w_db <- inner_join(broad_comb_annot, gse_mesh_collapse, by=c("GSE"="gse")) # 1572 drug trt/ctl inst
+head(broad_w_db[,c("pert_label", "Mentions")], 20) # some of these look reasonable, some look like BS
 
-pert_annot <- broad_annot %>% group_by(sig_id) %>% filter(class_id=="A") %>% summarise("GSE"=unique(series), pert_ids = paste(sample_id, collapse="|"), pert_label=paste(unique(class_label), collapse="|") )
-ctl_annot <- broad_annot %>% group_by(sig_id) %>% filter(class_id=="B") %>% summarise(ctl_ids = paste(sample_id, collapse="|"), ctl_label=paste(unique(class_label), collapse="|") )
-comb_annot <- full_join(pert_annot, ctl_annot, by="sig_id")
-dim(comb_annot) # 6470 groups
+creeds_w_db <- inner_join(creeds_data, gse_mesh_collapse, by=c("geo_id"="gse")) # 611 drug trt/ctl inst
+head(creeds_w_db[,c("drug_name", "Mentions")], 20) # again some look like BS but others do check out
 
-table(sapply(comb_annot$GSE, function(x) str_detect(x, "GSE"))) # 58 are arrayExpress  1305 are GSE
-head(comb_annot)
 
-comb_annot_filt <- filter(comb_annot, GSE %in% overlapping_b)
-broad_w_db <- inner_join(comb_annot, select(gse_mesh_db, "gse", "Mentions", "db_id"), by=c("GSE"="gse"))
-head(broad_w_db)
-
-# grab drug, tissue, sex info
-
-label_mat <- read.csv("data/label_mat.csv")
-head(label_mat)
+# ---- grab drug, tissue, sex, cell line info ---- #
+label_mat <- read.csv("data/label_mat.csv") # expression-based labels from three methods + tissue
 label_mat <- rename(label_mat, "gsm" ="X")
-ale_data <- read.csv("../../drug_expression/drug_labeling/ale_processing/ale_combined_data.csv")
+ale_data <- read.csv("../../drug_expression/drug_labeling/ale_processing/ale_combined_data.csv") # text-based labels
 comb_labels <- left_join(label_mat, select(ale_data, c("gsm", "gse", "gpl", "text_sex", "text_tissue_name", "cell_line")))          
 
-
-
+# TODO - mesh to drugbank mapping
+# TODO - cell line info
 
 # NOW LOOK AT THE OUTPUT
-
-
 
