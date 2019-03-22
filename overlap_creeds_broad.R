@@ -17,7 +17,7 @@ drug_pert_manual$source <- "creeds_manual"
 # note - the manual data has additional fields including the DrugBank ID
 # TODO - check overlap w drugbank IDs
 
-creeds_data <- rbind(select(drug_pert_manual, colnames(drug_pert_auto)), drug_pert_auto)
+creeds_data <- rbind(drug_pert_manual[, colnames(drug_pert_auto)], drug_pert_auto)
 creeds_gse <- unique(creeds_data$geo_id) # 343
 
 # ---- load the BROAD annotations ---- #
@@ -38,9 +38,23 @@ table(sapply(broad_comb_annot$GSE, function(x) str_detect(x, "GSE"))) # 58 are a
 # TODO - put together CREEDS and BROAD data
 # BROAD data doesn't have a "drug_name" field
 
+hc_drug_gse <- union(broad_gse, creeds_gse) # 1987
+
+# which are human
+require('GEOmetadb')
+con <- dbConnect(SQLite(),'../../drug_expression/dataset_identification/GEOmetadb.sqlite') 
+res <- dbGetQuery(con, "SELECT gse.gse, gpl.gpl, organism, pubmed_id FROM gse JOIN gse_gpl on gse.gse = gse_gpl.gse JOIN gpl ON gse_gpl.gpl=gpl.gpl")
+res2 <- separate_rows(res, organism, sep=";\t")
+human_data <- filter(res2, organism=="Homo sapiens")
+
+human_hc_drug <- intersect(hc_drug_gse, human_data$gse) # 1608
 
 # ---- load the annotations we put together ---- #
 gse_mesh_db <- read.delim("data/gse_mesh_db.txt")
+
+
+gse_to_download <- setdiff(hc_drug_gse, gse_mesh_db$gse)
+write.table(data.frame(gse_to_download), file="data/gse_to_dowload_creeds_broad.txt", row.names=FALSE, col.names=FALSE, quote=FALSE)
 
 # collapse by study --> each study contains multiple mentions and their drugbank IDs
 #  doing this because we will be joining on the study

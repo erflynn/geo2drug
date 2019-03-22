@@ -20,11 +20,7 @@ gse_mesh_db <- read.delim("data/gse_mesh_db.txt")
 
 # add drugbank names + ATC codes
 drugbank <- fromJSON(file="data/db_data/drugbank_info.json") 
-drugbank_df <- do.call(rbind,
-                       lapply(drugbank, function(x) data.frame(
-                         lapply(x[c("synonyms","unii","name","cas","dbID","chebi" , "ATC")], 
-                                function(y) paste(y, collapse=" | ")), stringsAsFactors=FALSE)))
-write.table(drugbank_df, file="data/db_data/drugbank_parsed.txt", sep="\t", row.names=FALSE)
+drugbank_df <- read.delim(drugbank_df)
 ```
 
 What are the most frequent drugs?

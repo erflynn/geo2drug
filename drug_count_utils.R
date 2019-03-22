@@ -22,3 +22,6 @@ vec_to_df <- function(vec, item_sep="|") {
   df$id <- names(vec)
   return(df)
 }
+
+grabMeshType <-  function(x) {substr(x, 1, 1)} 
+# gets the first character

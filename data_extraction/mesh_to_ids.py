@@ -27,7 +27,8 @@ options.add_argument('headless')
 mesh_id_to_info = {}
 
 # get list of mesh to download - NOTE: this is from geo2pubmed_id.R
-with open("data/list_mesh.txt", 'r') as f:
+with open("data/mesh_to_download_v2.txt", 'r') as f:
+#with open("data/list_mesh.txt", 'r') as f:
 	lines = f.readlines()
 list_mesh_ids = [line.strip() for line in lines]
 
