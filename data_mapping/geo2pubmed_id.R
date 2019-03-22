@@ -63,7 +63,8 @@ pmid_mesh_df_long2 <- filter(pmid_mesh_df_long, grabMeshType(MeSH)=="D")
 mesh_info <- fromJSON(file="data/db_data/mesh_info.json")
 mesh_info2 <- fromJSON(file="data/db_data/mesh_info2.json")
 list_mesh_downloaded <-  c(names(mesh_info), names(mesh_info2))
-missing_mesh <- setdiff(all_mesh_ids[mesh_type=="D"], list_mesh_downloaded) # 1191 - boo... run this overnight
+missing_mesh <- setdiff(all_mesh_ids[mesh_type=="D"], list_mesh_downloaded) # 1191 
+
 
 
 # read in all the pubtator chemical data, filter by IDs that are associated with a human ID
