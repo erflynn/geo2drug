@@ -16,7 +16,7 @@ for i in range(1, 14):
 	f_string = "pubmed_%s.xml" %i
 	tree = ET.ElementTree(file=f_string)
 	root = tree.getroot()
-	for pubmed_article in root:
+	for pubmed_article in root: 
 		pmid = str(pubmed_article[0].findall("PMID")[0].text)
 		mesh_headings = pubmed_article[0].findall("MeshHeadingList")
 		if len(mesh_headings) == 0:

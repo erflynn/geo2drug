@@ -10,6 +10,7 @@ require('tidyverse')
 require('GEOmetadb')
 require('reshape2')
 options(stringsAsFactors=FALSE)
+source("drug_count_utils.R")
 ```
 
 #### Load relevant data 
@@ -60,17 +61,7 @@ num_studies <- length(unique(comb_labels$gse))
 
 # construct a table for the breakdown
 
-getSexLabStats <- function(df){
-  # function to get stats of numbers m,f for a particular study 
-  count.per.study <- df %>% group_by(gse) %>% summarize(num_f=sum(sexlab=="female"), num_m=sum(sexlab=="male"))
-  m.only <- filter(count.per.study, num_f==0)
-  f.only <- filter(count.per.study, num_m==0)
-  mixed.sex <- filter(count.per.study, num_m!=0, num_f!=0) 
-  
-  num_studies <- length(unique(comb_labels$gse))
-  list.stats <- list("f"=nrow(f.only), "m"=nrow(m.only), "both"=nrow(mixed.sex), "unlab"=num_studies-length(unique(df$gse)))
-  return(list.stats)
-}
+
 sex_lab_present2 <- sex_lab_present
 sex_lab_present2 <- rename(sex_lab_present2, sexlab=text_sex)
 text.stats <- getSexLabStats(sex_lab_present2)
@@ -86,6 +77,7 @@ rank.stats <- getSexLabStats(rank_dat)
 # put together table and reformat for plotting
 stat.table <- do.call(rbind, lapply(list(text.stats, toker.stats, massir.stats, rank.stats), data.frame))
 stat.table$method <- c("text", "toker", "massir", "rankS")
+write.table(stat.table, file="data/count_of_sex_breakdown_by_method.txt", row.names=FALSE, sep="\t")
 
 melted.tab <- melt(stat.table)
 melted.tab$method <- factor(melted.tab$method, c("text", "toker", "massir", "rankS"))

@@ -25,8 +25,10 @@ broad_annot <- read.delim2("data/ref_data/geo_phenotypes_n6470.txt") # 193,370 s
 broad_gse <- unique(broad_annot$series) # 1363
 
 # reformat the BROAD annotations s.t. the GSMs for the perts/ctls follow a similar format to the CREEDS data
-pert_annot <- broad_annot %>% group_by(sig_id) %>% filter(class_id=="A") %>% summarise("GSE"=unique(series), pert_ids = paste(sample_id, collapse="|"), pert_label=paste(unique(class_label), collapse="|") )
-ctl_annot <- broad_annot %>% group_by(sig_id) %>% filter(class_id=="B") %>% summarise(ctl_ids = paste(sample_id, collapse="|"), ctl_label=paste(unique(class_label), collapse="|") )
+pert_annot <- broad_annot %>% group_by(sig_id) %>% filter(class_id=="A") %>% 
+  summarise("GSE"=unique(series), pert_ids = paste(sample_id, collapse="|"), pert_label=paste(unique(class_label), collapse="|") )
+ctl_annot <- broad_annot %>% group_by(sig_id) %>% filter(class_id=="B") %>% 
+  summarise(ctl_ids = paste(sample_id, collapse="|"), ctl_label=paste(unique(class_label), collapse="|") )
 broad_comb_annot <- full_join(pert_annot, ctl_annot, by="sig_id")
 broad_comb_annot$source <- "broad_manual"
 dim(broad_comb_annot) # 6470 trt/ctl instances
@@ -53,6 +55,9 @@ overlapping_c <- intersect(creeds_gse, mesh_gse) # 77
 
 # Hmmm... this is very little overlap
 
+# TODO - problem - we only downloaded the overlapping data --> need to download the rest
+#  creeds_gse
+#
 
 # look at annotations that overlap
 broad_w_db <- inner_join(broad_comb_annot, gse_mesh_collapse, by=c("GSE"="gse")) # 1572 drug trt/ctl inst
@@ -68,8 +73,26 @@ label_mat <- rename(label_mat, "gsm" ="X")
 ale_data <- read.csv("../../drug_expression/drug_labeling/ale_processing/ale_combined_data.csv") # text-based labels
 comb_labels <- left_join(label_mat, select(ale_data, c("gsm", "gse", "gpl", "text_sex", "text_tissue_name", "cell_line")))          
 
-# TODO - mesh to drugbank mapping
+# filter the comb_labels by what is in creeds, broad
+
+drugbank_df <- read.delim("data/db_data/drugbank_parsed.txt") # drugbank info
+
 # TODO - cell line info
 
-# NOW LOOK AT THE OUTPUT
+# ---- create a "count per drug exposure" table ---- #
+
+
+# this is like the count.per.study table BUT has counts divided by pert_id, ctl_id
+# num_f_p, num_f_c, num_m_p, num_m_c, study_type
+
+
+
+# ---- remake plots looking at these data ---- #
+
+# barplot of sex breakdown of GSEs
+
+
+# ATC breakdown of GSEs
+
+
 

@@ -19,6 +19,7 @@ require('tidyverse')
 require('GEOmetadb')
 require('meshr')
 require('rjson')
+source("drug_count_utils.R")
 
 # --- get list of human GSEs, PMIDs ---- #
 con <- dbConnect(SQLite(),'../../drug_expression/dataset_identification/GEOmetadb.sqlite') 
@@ -43,6 +44,28 @@ gse_to_pubmed <- res3[!duplicated(res3[,c("gse", "pubmed_id")]),c("gse", "pubmed
 gse_to_pubmed <- rename(gse_to_pubmed, PMID=pubmed_id)
 
 # --- add MeSH ---- #
+
+# load the mesh data (after 'parse_pubmed_xml.py' has been run)
+pmid_to_mesh <- fromJSON(file="data/db_data/pmid_to_mesh.json")
+
+pmid_mesh_df <- vec_to_df(pmid_to_mesh)
+colnames(pmid_mesh_df) <- c("MeSH", "PMID")
+
+pmid_mesh_df_long <- separate_rows(pmid_mesh_df, MeSH, sep="\\|")
+all_mesh_ids <- unique(pmid_mesh_df_long$MeSH) # 1491
+mesh_type <- sapply(all_mesh_ids, grabMeshType)
+table(mesh_type) 
+# D    Q 
+# 1424   67 
+# <--- why are there are only D, Q - what about other categories??? 
+pmid_mesh_df_long2 <- filter(pmid_mesh_df_long, grabMeshType(MeSH)=="D")
+# which did we download? download all the rest
+mesh_info <- fromJSON(file="data/db_data/mesh_info.json")
+mesh_info2 <- fromJSON(file="data/db_data/mesh_info2.json")
+list_mesh_downloaded <-  c(names(mesh_info), names(mesh_info2))
+missing_mesh <- setdiff(all_mesh_ids[mesh_type=="D"], list_mesh_downloaded) # 1191 - boo... run this overnight
+
+
 # read in all the pubtator chemical data, filter by IDs that are associated with a human ID
 pubtator <- read.delim("../../drug_expression/drug_labeling/external_data/chemical2pubtator", stringsAsFactors = FALSE)
 
