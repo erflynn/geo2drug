@@ -77,16 +77,13 @@ mesh_labeled_common <- mesh_to_mention %>% group_by(MeSH) %>%
 
 # there are also some CHEBI entries - separate these out
 chebi_entries <- sapply(pubtator_gse$MeshID, function(x) strsplit(x, ":")[[1]][[1]]=="CHEBI")
-chebi <- pubtator_gse[chebi_entries,] #  275 CHEBI
-mesh <-pubtator_gse[!chebi_entries,] #1525 MeSH
-
+chebi <- pubtator_gse[chebi_entries,] # 275 CHEBI
+mesh <-pubtator_gse[!chebi_entries,] # 1525 MeSH
 
 
 ##### ----- START MAPPING ----- #####
-
-
  
-# 1. Map by NAME
+# map by name
 mentions <- separate_rows(collapsed_mesh, mention_str, sep="\\|")
 # TODO - double check chemical names are ok
 
@@ -132,7 +129,8 @@ list.unmapped2 <- setdiff(list.unmapped, new_chebi$MeSH)
 
 ### - use MESH to map more - ###
 
-mesh_info <- fromJSON(file="data/mesh_info.json") # 233
+# TODO - condense - the MeSH info is in two parts
+mesh_info <- fromJSON(file="data/db_data/mesh_info.json") # 233
 mesh_data_downloaded <- intersect(mesh$MeSH, names(mesh_info)) # 120
 table(mesh_data_downloaded %in% list.unmapped2) # 72 of these are new!
 
@@ -168,18 +166,11 @@ write.table(mapping_tab3, file="data/mesh_db_mapping_0228.txt", row.names=FALSE,
 
 
 
-
-# TODO:
-# check already existing
-# - check chebi mapping
-
-# map the new ones
-
 still.unmapped <- setdiff(list.unmapped2, names(mesh_info)) # 1171 <-- download THESE!
 write.table(data.frame(still.unmapped), file="data/mesh_to_download.txt", sep="\t", row.names=FALSE, col.names=FALSE, quote=FALSE)
 
 # --- load the second mesh file ---#
-mesh_info2 <- fromJSON(file="data/mesh_info2.json")
+mesh_info2 <- fromJSON(file="data/db_data/mesh_info2.json")
 length(mesh_info2)
 mesh_df2 <- do.call(rbind, 
                    lapply(mesh_info2, function(x) 
@@ -254,4 +245,5 @@ new_by_cas <- inner_join(new_mapping, drugbank_df[,c("cas", "dbID")],by="cas")
 new_by_cas <- rename(new_by_cas, "db_id"="dbID")
 mapping_tab6 <- rbind(mapping_tab5, new_by_cas[colnames(mapping_tab4)])
 write.table(mapping_tab6, file="data/mesh_db_mapping_0302.txt", row.names=FALSE, sep="\t", quote=FALSE) # 673 map
-
+gse_mesh_db <- full_join(gse_mesh, mapping_tab6, by="MeSH")
+write.table(gse_mesh_db, file="data/gse_mesh_db.txt", row.names=FALSE, sep="\t", quote=FALSE)

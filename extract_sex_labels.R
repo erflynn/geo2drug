@@ -32,4 +32,4 @@ names(labelMat) <- list.gses # label with the GSEs
 
 labelMatDF <- do.call(cbind, labelMat)
 save(labelMat, file="labelMat.RData")
-write.csv(t(labelMatDF), file="label_mat.csv", row.names=TRUE)
+write.csv(t(labelMatDF), file="expr_label_mat.csv", row.names=TRUE)

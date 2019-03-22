@@ -1,22 +1,22 @@
-# examine_drug_freq.R
-# E Flynn
-# 3/4/2019
-#
-# Code for examining drug frequency in GEO.
-#   - what are the ATC codes?
-#   - plot the common drugs
+### examine_drug_freq.R
+### E Flynn
+### 3/4/2019
 
+Code for examining drug frequency in GEO.
+
+
+```{r, message=FALSE}
 require('tidyverse')
 require('rjson')
 require('ggplot2')
 require('GEOmetadb')
 require('gplots')
+options(stringsAsFactors = FALSE)
+```
 
-
-mapping_tab6 <-read.table("data/mesh_db_mapping_0302.txt", header=TRUE)
-gse_mesh <- read.delim("data/gse_to_mesh.txt", header=TRUE)
-gse_mesh_db <- full_join(gse_mesh, mapping_tab6, by="MeSH")
-head(gse_mesh_db)
+Load and put together data
+```{r}
+gse_mesh_db <- read.delim("data/gse_mesh_db.txt")
 
 # add drugbank names + ATC codes
 drugbank <- fromJSON(file="data/db_data/drugbank_info.json") 
@@ -24,8 +24,11 @@ drugbank_df <- do.call(rbind,
                        lapply(drugbank, function(x) data.frame(
                          lapply(x[c("synonyms","unii","name","cas","dbID","chebi" , "ATC")], 
                                 function(y) paste(y, collapse=" | ")), stringsAsFactors=FALSE)))
+write.table(drugbank_df, file="data/db_data/drugbank_parsed.txt", sep="\t", row.names=FALSE)
+```
 
-# what are the most frequent drugs?
+What are the most frequent drugs?
+```{r}
 name_df <- drugbank_df[,c("dbID", "name", "ATC")]
 name_df <- rename(name_df, "db_id"="dbID")
 gse_mesh_db_n <- left_join(gse_mesh_db, name_df)
@@ -43,21 +46,30 @@ ggplot(gse_mesh_db2, aes(name)) + geom_histogram(stat="count", bins=30)+
 # TODO
 #  go through and map these
 summary(as.factor(gse_mesh_db_na$Mentions))
+```
 
-# breakdown by drug class
+Look at breakdown by drug class
+```{r}
 atc_classes <- sapply(gse_mesh_db2$ATC, function(x) ifelse(x=="", NA, substr(x, 1, 1)))
 table(is.na(atc_classes)) # 1489
 atc_counts <- data.frame(table(atc_classes[!is.na(atc_classes)]))
 colnames(atc_counts) <- c("class", "count")
-atc_names <- read.delim("data/atc_classes.txt", header=FALSE)
-head(atc_names)
+atc_names <- read.delim("data/ref_data/atc_classes.txt", header=FALSE)
+
 colnames(atc_names) <- c("class", "descript")
 atc_info <- inner_join(atc_counts, atc_names)
-head(atc_info)
+
 atc_info$descript <- factor(atc_info$descript, atc_info$descript)
 ggplot(atc_info, aes(x=class, y=count, fill=descript))+geom_histogram(stat="identity")+ggtitle("ATC breakdown")
+```
 
-gse_w_study_info <- left_join(gse_mesh_db2, count.per.study) # TODO not in this file
+Breakdown by ATC class for single, multi-sex
+```{r}
+count.per.study <- read.delim("data/sex_counts_per_study.txt")
+tiss_dat <- read.delim("data/study_tissue_breakdown.txt")
+study_tiss_count <- left_join(count.per.study, tiss_dat)
+
+gse_w_study_info <- left_join(gse_mesh_db2, count.per.study) 
 head(gse_w_study_info)
 gse_w_study_info$class <- sapply(gse_w_study_info$ATC, function(x) ifelse(x=="", NA, substr(x, 1, 1)))
 gse_w_study_info2 <- left_join(gse_w_study_info, atc_names)
@@ -67,48 +79,62 @@ ggplot(filter(gse_w_study_info2, !is.na(study_type) & !is.na(descript)), aes(x=c
 head(data.frame("count"=summary(as.factor(filter(gse_w_study_info2, study_type=="f")$name))), 10)
 head(data.frame("count"=summary(as.factor(filter(gse_w_study_info2, study_type=="m")$name))), 10)
 head(data.frame("count"=summary(as.factor(filter(gse_w_study_info2, study_type=="both")$name))), 10)
+```
 
+ATC breakdown by tissue type
+```{r}
 atc_tiss <- inner_join(gse_w_study_info2, study_tiss_count)
 atc_tiss <- left_join(atc_tiss, atc_info[,c("class", "descript")])
 atc_tiss2 <-filter( atc_tiss, class != "L")
 tiss_class <- table(atc_tiss2[,c("descript", "common_tiss")])
-tiss_class/rowSums(tiss_class)
 
 heatmap.2(tiss_class, col=colorRampPalette(c("white", "blue", "darkblue"))(n=500),  
           Rowv=FALSE, Colv=FALSE, trace="none", 
           margins=c(6,22))
-filter(atc_tiss, class=="V" & common_tiss=="Muscle" & !is.na(gse))
-#  GSE35764 fructose load
-#  GSE9105 insulin
-table(inner_join(gse_w_study_info2[gse_w_study_info2$name=="Estradiol",], study_tiss_count)[,c("study_type", "common_tiss")])
-table(inner_join(gse_w_study_info2[gse_w_study_info2$name=="Fluorouracil",], study_tiss_count)[,c("study_type", "common_tiss")])
-
-# look at a couple patterns 
-filter(atc_tiss, name=="Fluorouracil")
-select(filter(atc_tiss, name=="Doxorubicin"), c("gse", "PMID", "MeshID", "name", "num_f", "num_m", "study_type", "common_tiss"))
-table(filter(atc_tiss, name=="Doxorubicin")[,c("study_type", "common_tiss")])
+```
 
 
-count_table <- table(gse_w_study_info[,c("study_type", "class")])
-chisq.p <- lapply(colnames(count_table), function(x)
-  chisq.test(count_table[c("f", "m"),x])$p.value)
-names(chisq.p) <- colnames(count_table)
-chisq.p[chisq.p < 0.05/ncol(count_table)]
-
+Look at date patterns - do we see a change in sex breakdown over time?
+```{r}
+# extract data on PMID datas
 con <- dbConnect(SQLite(),'../../drug_expression/dataset_identification/GEOmetadb.sqlite') 
 res <- dbGetQuery(con, "SELECT gse.gse, gpl.gpl, organism, pubmed_id, gse.submission_date FROM gse JOIN gse_gpl on gse.gse = gse_gpl.gse JOIN gpl ON gse_gpl.gpl=gpl.gpl")
 res2 <- filter(res, organism=="Homo sapiens")
 res3 <- filter(res2, !is.na(pubmed_id))
 length(unique(res3$gse)) # 16904
-pubmed_ids <- unique(res3$pubmed_id) # 12576
+pubmed_ids <- unique(res3$pubmed_id)
 
-# look at date patterns
+# reformat for plotting
 drug_w_date <- left_join(select(gse_w_study_info2, c("gse", "PMID", "name", "class", "study_type")), select(res3, c("gse", "submission_date")))
 drug_w_date$Month <-as.Date(cut(as.Date(drug_w_date$submission_date), breaks = "month"))
 drug_w_date$Year <-as.Date(cut(as.Date(drug_w_date$submission_date), breaks = "year"))
 year_counts <- filter(drug_w_date, !is.na(study_type)) %>% group_by(Year, study_type) %>% summarize(num_per_year=n())
 
 ggplot(year_counts, aes(x=Year, y=num_per_year, fill=study_type)) + geom_histogram(stat="identity", position="dodge")+ylab("Number of studies per year")+theme(text = element_text(size=20))
+```
+
+
+Look at a couple examples
+```{r}
+filter(atc_tiss, class=="V" & common_tiss=="Muscle" & !is.na(gse))
+#  GSE35764 fructose load
+#  GSE9105 insulin
+
+
+table(inner_join(gse_w_study_info2[gse_w_study_info2$name=="Estradiol",], study_tiss_count)[,c("study_type", "common_tiss")])
+table(inner_join(gse_w_study_info2[gse_w_study_info2$name=="Fluorouracil",], study_tiss_count)[,c("study_type", "common_tiss")])
+
+filter(atc_tiss, name=="Fluorouracil")
+select(filter(atc_tiss, name=="Doxorubicin"), c("gse", "PMID", "MeshID", "name", "num_f", "num_m", "study_type", "common_tiss"))
+table(filter(atc_tiss, name=="Doxorubicin")[,c("study_type", "common_tiss")])
+
+# check for significance
+count_table <- table(gse_w_study_info[,c("study_type", "class")])
+chisq.p <- lapply(colnames(count_table), function(x)
+  chisq.test(count_table[c("f", "m"),x])$p.value)
+names(chisq.p) <- colnames(count_table)
+chisq.p[chisq.p < 0.05/ncol(count_table)]
+```
 
 
 

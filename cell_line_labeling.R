@@ -7,7 +7,7 @@
 require('rjson')
 
 # load the cellosaurus labels
-cellosaurus <- fromJSON(file="data/cellosaurus.json") 
+cellosaurus <- fromJSON(file="data/db_data/cellosaurus.json") 
 cell_names <- names(cellosaurus)
 names2 <- unlist(sapply(cellosaurus, function(x) return(x$name)))
 cell_syns <- unlist(sapply(cellosaurus, function(x) return(x$synonyms)))

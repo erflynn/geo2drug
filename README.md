@@ -17,8 +17,8 @@ This code is used to extract relevant data from DrugBank, MeSH, and Cellosaurus
 * `extract_sex_labels.R`: Extract sex label data from drug mesh (run server-side after GSE download)
 
 #### Data analysis:
-* `drug_gse_annot.R`: Takes the results of the annotations and visualizes the results.
-* `examine_drug_freq.R`: Looks at the frequency of drugs, visualizes the results
+* `drug_gse_annot.Rmd`: Takes the results of the annotations and visualizes the results.
+* `examine_drug_freq.Rmd`: Looks at the frequency of drugs, visualizes the results
 
 #### Data files:
  * `data/db_data/`: contains output of database downloads and parsing

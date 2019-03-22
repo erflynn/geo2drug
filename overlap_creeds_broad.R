@@ -38,9 +38,7 @@ table(sapply(broad_comb_annot$GSE, function(x) str_detect(x, "GSE"))) # 58 are a
 
 
 # ---- load the annotations we put together ---- #
-mesh_mapping_tab <-read.table("data/mesh_db_mapping_0302.txt", header=TRUE)
-gse_mesh <- read.delim("data/gse_to_mesh.txt", header=TRUE)
-gse_mesh_db <- full_join(gse_mesh, mesh_mapping_tab, by="MeSH")
+gse_mesh_db <- read.delim("data/gse_mesh_db.txt")
 
 # collapse by study --> each study contains multiple mentions and their drugbank IDs
 #  doing this because we will be joining on the study
@@ -65,7 +63,7 @@ head(creeds_w_db[,c("drug_name", "Mentions")], 20) # again some look like BS but
 
 
 # ---- grab drug, tissue, sex, cell line info ---- #
-label_mat <- read.csv("data/label_mat.csv") # expression-based labels from three methods + tissue
+label_mat <- read.csv("data/expr_label_mat.csv") # expression-based labels from three methods + tissue
 label_mat <- rename(label_mat, "gsm" ="X")
 ale_data <- read.csv("../../drug_expression/drug_labeling/ale_processing/ale_combined_data.csv") # text-based labels
 comb_labels <- left_join(label_mat, select(ale_data, c("gsm", "gse", "gpl", "text_sex", "text_tissue_name", "cell_line")))          
