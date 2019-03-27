@@ -18,8 +18,9 @@ mesh_not_in_db <- setdiff(all_mesh_ids, mesh_db_info$MESHID)
 
 mesh_df_full <- read.delim2("data/db_data/mesh_info_df.txt")
 length(intersect(mesh_db_info$MESHID, mesh_df_full$MeSH))
-mesh_no_info <- setdiff(mesh_not_in_db, mesh_df_full$MeSH) # 320 
+
 write.table(data.frame(mesh_no_info), file="data/mesh_to_download_v3.txt", row.names=FALSE, quote=FALSE, col.names=FALSE)
+
 
 ######### WHAT DATA CORRESPONDS TO DRUGS???? ###########
 # likely a drug if it contains a "pharm" ID

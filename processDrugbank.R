@@ -8,6 +8,7 @@ require('rjson')
 require('tidyverse')
 source('drug_count_utils.R')
 
+
 # load drugbank data and convert it into a data frame with one row per drug
 drugbank <- fromJSON(file="data/db_data/drugbank_info.json") 
 list.drugs <- lapply(drugbank, function(x) unique(unlist(tolower(c(x$synonyms, x$name)))))
@@ -25,4 +26,5 @@ write.table(drugbank_df, file="data/db_data/drugbank_parsed.txt", sep="\t", row.
 
 # --- CONSTRUCT DRUGBANK VOCABULARY --- #
 drug_name_syn <- createNameSynVocab(drugbank_df, "dbID")
+
 write.table(drug_name_syn, file="data/db_data/drugbank_vocab.txt", sep="\t", row.names=FALSE)
