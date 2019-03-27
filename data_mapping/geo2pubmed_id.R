@@ -112,7 +112,7 @@ mesh_info <- fromJSON(file="data/db_data/mesh_info.json")
 mesh_info2 <- fromJSON(file="data/db_data/mesh_info2.json")
 list_mesh_downloaded <-  c(names(mesh_info), names(mesh_info2))
 mesh_missing <- setdiff(mesh_not_in_db, list_mesh_downloaded) # 301 have no info downloaded --> download these?
-
+mesh_info3 <- fromJSON(file="data/db_data/mesh_info3.json")
 
 ######### WHAT DATA CORRESPONDS TO DRUGS???? ###########
 # likely a drug if it contains a "pharm" ID
@@ -144,10 +144,16 @@ names(list.drugs) <- lapply(drugbank, function(y) y$dbID)
 drug.df <- data.frame("drug_names"=unlist(lapply(list.drugs, function(x) paste(x, collapse="|"))))
 drug.df$db_id <- names(list.drugs)
 drug.df2 <- separate_rows(drug.df, drug_names, sep="\\|")
+
 drugbank_df <- do.call(rbind,
                        lapply(drugbank, function(x) data.frame(
                          lapply(x[c("synonyms","unii","name","cas","dbID","chebi" )], 
                                 function(y) paste(y, collapse=" | ")), stringsAsFactors=FALSE)))
+drugbank_df_copy <- drugbank_df
+# ESCAPE QUOTES!!!
+drugbank_df$name <- sapply(drugbank_df$name, function(x) gsub( '\\"', "\\\'\'", x))
+drugbank_df$synonyms <- sapply(drugbank_df$synonyms, function(x) gsub( '\\"', "\\\'\'", x))
+head(drugbank_df[4512:4513,])
 write.table(drugbank_df, file="data/db_data/drugbank_parsed.txt", sep="\t", row.names=FALSE)
 
 # map by name/synonym

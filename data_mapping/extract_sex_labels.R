@@ -5,7 +5,8 @@
 # run server-side after all of the GSEs have been downloaded as MetaIntegrator objects into a directory
 
 # list the GSE files in the directory
-list.gse.files <- list.files("drug_mesh")
+DATA.DIR <- "drug_mesh" #"hc_drug"
+list.gse.files <- list.files(DATA.DIR)
 list.gses <- sapply(list.gse.files, function(x) strsplit(x, ".", fixed=TRUE)[[1]][1]) # 3184 out of 4706... not great (list: gse_w_drug_mesh.txt)
 
 # function for tissue states 
@@ -15,7 +16,7 @@ getMaxTissue <- function(ts, tiss_names){
 
 # load the data and grab sex labels
 labelMat <- lapply(list.gses, function(gse){
-  load(sprintf("drug_mesh/%s.RData", gse)) # dataObj
+  load(sprintf("%s/%s.RData", DATA.DIR, gse)) # dataObj
   tryCatch({
     ts <- getMaxTissue(dataObj$tissue, colnames(dataObj$tissue)[1:(ncol(dataObj$tissue)-3)])
     df <-rbind(do.call(rbind,c(dataObj$sexlab)), t(ts))  

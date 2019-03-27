@@ -1,0 +1,41 @@
+---
+title: "examine_hc_annot.Rmd"
+author: "E Flynn"
+date: "3/25/2019"
+output: html_document
+---
+
+Load all the study info
+- how many studies are there
+- what were downloaded before?
+- which have annotations
+```{r}
+# what is the list
+hc_drug_org <- read.csv("data/hc_drug_org.csv")
+human_drug <- filter(hc_drug_org, organism=="Homo sapiens")
+head(human_drug)
+
+# TODO - download the array express data
+prev_labeled <- read.csv("data/expr_label_mat.csv")
+prev_labeled <- rename(prev_labeled, "gsm"="X")
+
+# which are in the list?
+# ... huh, this is missing the GSE :,( --> slightly more complicated to figure out which we need... oops
+
+
+hc_labeled <- read.csv("data/expr_label_mat_hc_drug.csv")
+hc_labeled <- rename(hc_labeled, "gsm"="X")
+ale_data <- read.csv("../../drug_expression/drug_labeling/ale_processing/ale_combined_data.csv")
+comb_labels <- left_join(rbind(prev_labeled, hc_labeled), select(ale_data, c("gsm", "gse", "gpl", "text_sex", "text_tissue_name", "cell_line"))) 
+```
+
+
+Put together the full dataframe
+```{r}
+comb_c_b <- read.csv("data/broad_creeds_annot_combined.csv")
+head(comb_c_b)
+
+### PROBLEM - need to map all the data to drugbank annotations (or other?)
+```
+
+

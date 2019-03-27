@@ -25,3 +25,13 @@ vec_to_df <- function(vec, item_sep="|") {
 
 grabMeshType <-  function(x) {substr(x, 1, 1)} 
 # gets the first character
+
+
+drugbank_join <- function(df, col){
+  # takes a dataframe and adds a drugbank ID / name if it intersects with the column
+  
+  # load the drugbank data --> format into name/syn
+  
+  # map if
+  
+}

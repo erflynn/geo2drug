@@ -7,7 +7,7 @@
 #   GSE, ctl GSMs, pert GSMs, DrugBank ID, DrugName, sex labels?, tissue/cell line labels?
 
 require('tidyverse')
-
+options(stringsAsFactors=FALSE)
 # ----- load the CREEDS data ----- #
 drug_pert_auto <- read.csv("../../drug_expression/drug_labeling/data/single_drug_perturbations-p1.0.csv", stringsAsFactors = FALSE)
 drug_pert_auto$source <- "creeds_auto"
@@ -18,7 +18,7 @@ drug_pert_manual$source <- "creeds_manual"
 # TODO - check overlap w drugbank IDs
 
 creeds_data <- rbind(drug_pert_manual[, colnames(drug_pert_auto)], drug_pert_auto)
-creeds_gse <- unique(creeds_data$geo_id) # 343
+creeds_gse <- unique(creeds_data$geo_id) # 709
 
 # ---- load the BROAD annotations ---- #
 broad_annot <- read.delim2("data/ref_data/geo_phenotypes_n6470.txt") # 193,370 samples
@@ -33,28 +33,132 @@ broad_comb_annot <- full_join(pert_annot, ctl_annot, by="sig_id")
 broad_comb_annot$source <- "broad_manual"
 dim(broad_comb_annot) # 6470 trt/ctl instances
 
-table(sapply(broad_comb_annot$GSE, function(x) str_detect(x, "GSE"))) # 58 are arrayExpress, 1305 are GSE
+table(sapply(broad_comb_annot$GSE, function(x) str_detect(x, "GSE"))) # 355 are arrayExpress, 6115 are GSE
 
-# TODO - put together CREEDS and BROAD data
+# --- put together CREEDS and BROAD data --- #
 # BROAD data doesn't have a "drug_name" field
+head(broad_comb_annot)
+head(creeds_data)
+broad_comb_annot <- rename(broad_comb_annot, "inst_info"="pert_label", "id"="sig_id", "ctrl_ids"="ctl_ids")
+broad_comb_annot$cell_type <- NA
+creeds_data <- rename(creeds_data, "inst_info"="drug_name", "GSE"="geo_id")
+overlapping_cols <- intersect(colnames(creeds_data), colnames(broad_comb_annot))
+comb_c_b <- rbind(creeds_data[,overlapping_cols], broad_comb_annot[,overlapping_cols])
+write.csv(comb_c_b, file="data/broad_creeds_annot_combined.csv", row.names=FALSE)
 
 hc_drug_gse <- union(broad_gse, creeds_gse) # 1987
+
+# --- map these to DRUGBANK --- #
+
+drugbank_data <- read.delim2("data/db_data/drugbank_parsed.txt")
+drugbank_df <- separate_rows(drugbank_data[,c("synonyms", "name", "dbID")], synonyms,sep=" \\| ") # TODO - turn this into a general purpose method
+
+drug_name_syn <- rbind(drugbank_df[,c("name", "dbID")], rename(drugbank_df[,c("synonyms", "dbID")], "name"="synonyms"))
+drug_name_syn$name <- sapply(drug_name_syn$name, tolower)
+drug_name_syn <- drug_name_syn[!duplicated(drug_name_syn),]
+drug_name_syn <- filter(drug_name_syn, dbID!="")
+drug_name_syn <- filter(drug_name_syn, name!="")
+
+# broad data
+broad_comb_annot$inst_info <-sapply(broad_comb_annot$inst_info, tolower)
+
+# --- divide into drug exposures vs. other exposures vs. disease! --- #
+trt_inst <- str_detect(broad_comb_annot$inst_info, "treat|agent|before|after|expose")
+oe_inst <- str_detect(broad_comb_annot$inst_info, "overexp|over-exp")
+kd_inst <- str_detect(broad_comb_annot$inst_info, "knock|kd|deplete")
+normal_inst <- str_detect(broad_comb_annot$inst_info, "normal|control|healthy") # a couple of these are treated
+rna_inst <- str_detect(broad_comb_annot$inst_info, "transfect|mir|sirna|transduce")
+#View(broad_comb_annot[normal_inst, c("inst_info", "ctl_label")])
+#View(broad_comb_annot[!(trt_inst | oe_inst | kd_inst | normal_inst | rna_inst), c("inst_info", "ctl_label")])
+
+#require('fuzzyjoin')
+
+# from https://stackoverflow.com/questions/32914357/dplyr-inner-join-with-a-partial-string-match
+partial_join <- function(x, y, by_x, pattern_y){
+  idx_x <- sapply(y[[pattern_y]], grep, fixed(x[[by_x]]))
+idx_y <- sapply(seq_along(idx_x), function(i) rep(i, length(idx_x[[i]])))
+
+df <- dplyr::bind_cols(x[unlist(idx_x), , drop = F],
+                       y[unlist(idx_y), , drop = F])
+return(df)
+}
+
+
+# need to escape all the characters in a chemical mapping 
+escapeALLChars <- function(x){
+  tmp <- gsub( "\\{", "\\\\{", x)
+  tmp <- gsub( "\\}", "\\\\}", tmp)
+  tmp <- gsub( "\\[", "\\\\[", tmp)
+  tmp <- gsub( "\\]", "\\\\]", tmp)
+  tmp <- gsub( "\\(", "\\\\(", tmp)
+  tmp <- gsub( "\\)", "\\\\)", tmp)
+  return(tmp)
+}
+
+drug_name_syn$name <- sapply(drug_name_syn$name, escapeALLChars)
+# filter out names that are smaller than 5 characters - these will match too many things
+drug_name_syn2 <- drug_name_syn[(sapply(drug_name_syn$name, function(x) nchar(x) >= 5)),]
+# go back and match unmatched w/ 3-5 char??
+
+
+broad_mapped <- partial_join(broad_comb_annot, drug_name_syn2, by_x="inst_info", pattern_y="name")
+
+# filter by super common
+head(table(broad_mapped$name)[order(-table(broad_mapped$name))], 50)
+broad_mapped <- filter(broad_mapped, !name %in% c("helium", "cyclo", "carbon")) # common and non-specific
+
+max_mapping <- broad_mapped %>% group_by(inst_info) %>% filter(name==name[which.max(nchar(name))]) # extract the lONGEST MATCH
+max_mapping <- max_mapping[!duplicated(max_mapping),] # 1293 out of 6470 - this is not great...
+head(table(max_mapping$name)[order(-table(max_mapping$name))], 40)
+# filter by TF/IDF?
+
+# what about the ones that don't map?
+# -- first: filter out RNAs, etc
+not_rna <- broad_comb_annot[!( oe_inst | kd_inst | normal_inst | rna_inst),] # 3966
+head(setdiff(not_rna$inst_info, max_mapping$inst_info), 20)
+View(broad_comb_annot[!broad_comb_annot$id %in% max_mapping$id,c("inst_info")])
+# do any of them map with a 3/4-letter mapping?
+mapping2 <- partial_join(filter(broad_comb_annot, !id %in% broad_mapped$id), drug_name_syn, by_x="inst_info", pattern_y="name")
+head(table(broad_mapped$name)[order(-table(broad_mapped$name))], 50)
+
+
+
+# manual have drugbank IDs
+comb_c_b2 <- left_join(comb_c_b, drug_pert_manual[,c("id", "drugbank_id")])
+
+# automatic do not - these labels are effectively CRAP
+ # 0. <-- do these map thru MESH?
+ # count how many have an assoc PMID + MESH ID
+drug_pert_m
+ # 1. download metadata and try to extract???
+
+
+# BROAD look interesting - I think we need to run str_detect on all of these?
+head(broad_comb_annot$inst_info)
+
+
 
 # which are human
 require('GEOmetadb')
 con <- dbConnect(SQLite(),'../../drug_expression/dataset_identification/GEOmetadb.sqlite') 
 res <- dbGetQuery(con, "SELECT gse.gse, gpl.gpl, organism, pubmed_id FROM gse JOIN gse_gpl on gse.gse = gse_gpl.gse JOIN gpl ON gse_gpl.gpl=gpl.gpl")
-res2 <- separate_rows(res, organism, sep=";\t")
+res2 <- separate_rows(res, organism, sep=";\t") 
 human_data <- filter(res2, organism=="Homo sapiens")
-
+organism_labels <- select(res2, "gse", "organism")
+hc_drug_plus_org <- filter(organism_labels, gse %in% hc_drug_gse)
+write.csv(hc_drug_plus_org, file="data/hc_drug_org.csv", row.names=FALSE)
 human_hc_drug <- intersect(hc_drug_gse, human_data$gse) # 1608
 
+arrayexp <- setdiff(hc_drug_gse, hc_drug_plus_org$gse) # 58 ARRAY EXPRESS studies
+write.csv(data.frame(arrayexp), file="data/hc_array_exp.csv", row.names=FALSE)
 # ---- load the annotations we put together ---- #
 gse_mesh_db <- read.delim("data/gse_mesh_db.txt")
 
-
-gse_to_download <- setdiff(hc_drug_gse, gse_mesh_db$gse)
+gse_to_download <- setdiff(human_hc_drug, gse_mesh_db$gse) # 1149
 write.table(data.frame(gse_to_download), file="data/gse_to_dowload_creeds_broad.txt", row.names=FALSE, col.names=FALSE, quote=FALSE)
+
+
+
 
 # collapse by study --> each study contains multiple mentions and their drugbank IDs
 #  doing this because we will be joining on the study
@@ -88,9 +192,6 @@ ale_data <- read.csv("../../drug_expression/drug_labeling/ale_processing/ale_com
 comb_labels <- left_join(label_mat, select(ale_data, c("gsm", "gse", "gpl", "text_sex", "text_tissue_name", "cell_line")))          
 
 # filter the comb_labels by what is in creeds, broad
-
-drugbank_df <- read.delim("data/db_data/drugbank_parsed.txt") # drugbank info
-
 # TODO - cell line info
 
 # ---- create a "count per drug exposure" table ---- #

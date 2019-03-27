@@ -69,7 +69,7 @@ for mesh_id in list_mesh_ids:
 	mesh_id_to_info[mesh_id]=mesh_info
 
 # write out the info
-with open("data/db_data/mesh_info2.json", 'w') as f:
+with open("data/db_data/mesh_info3.json", 'w') as f:
 	mesh_str = json.dumps(mesh_id_to_info)
 	f.write(mesh_str)
 
