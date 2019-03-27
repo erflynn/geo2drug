@@ -13,13 +13,22 @@ getSexLabStats <- function(df){
 }
 
 
-vec_to_df <- function(vec, item_sep="|") {
-  # converts a named vector to a data frame
-  # TODO - clean this up and make it a better function, speed up!
-  #   - column names are HIDEOUS
-  
-  df <- data.frame(do.call(rbind, lapply(vec, function(x) paste(x, collapse=item_sep)) ))
-  df$id <- names(vec)
+# vec_to_df <- function(vec, item_sep="|") {
+#   # converts a named vector to a data frame
+#   # TODO - clean this up and make it a better function, speed up!
+#   #   - column names are HIDEOUS
+#   
+#   df <- data.frame(do.call(rbind, lapply(vec, function(x) paste(x, collapse=item_sep)) ))
+#   df$id <- names(vec)
+#   return(df)
+# }
+
+vec_to_df <- function(vec_info, item_sep="|"){
+
+  df <- do.call(rbind, 
+          lapply(vec_info, function(x) 
+            data.frame(lapply(x, function(y) paste(y, collapse=item_sep)), stringsAsFactors=FALSE)))
+  df$id <- names(vec_info)
   return(df)
 }
 

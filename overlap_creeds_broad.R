@@ -53,11 +53,7 @@ hc_drug_gse <- union(broad_gse, creeds_gse) # 1987
 drugbank_data <- read.delim2("data/db_data/drugbank_parsed.txt")
 drugbank_df <- separate_rows(drugbank_data[,c("synonyms", "name", "dbID")], synonyms,sep=" \\| ") # TODO - turn this into a general purpose method
 
-drug_name_syn <- rbind(drugbank_df[,c("name", "dbID")], rename(drugbank_df[,c("synonyms", "dbID")], "name"="synonyms"))
-drug_name_syn$name <- sapply(drug_name_syn$name, tolower)
-drug_name_syn <- drug_name_syn[!duplicated(drug_name_syn),]
-drug_name_syn <- filter(drug_name_syn, dbID!="")
-drug_name_syn <- filter(drug_name_syn, name!="")
+drug_name_syn <- read.delim2("data/db_data/drugbank_vocab.txt")
 
 # broad data
 broad_comb_annot$inst_info <-sapply(broad_comb_annot$inst_info, tolower)
