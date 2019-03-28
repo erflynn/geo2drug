@@ -84,6 +84,8 @@ collapsed_mesh <- mesh_to_mention %>% group_by(MeSH) %>%
 mesh_labeled_common <- mesh_to_mention %>% group_by(MeSH) %>% 
   summarise(most_common=names(which.max(table(unlist(lapply(Mentions, function(x) tolower(strsplit(x, "\\|")[[1]])))))))
 
+write.table(collapsed_mesh, file="data/db_data/pubtator_mesh_to_mention.txt", row.names=FALSE, sep="\t")
+
 # there are also some CHEBI entries - separate these out
 chebi_entries <- sapply(pubtator_gse$MeshID, function(x) strsplit(x, ":")[[1]][[1]]=="CHEBI")
 pubtator_chebi <- pubtator_gse[chebi_entries,] # 275 CHEBI
