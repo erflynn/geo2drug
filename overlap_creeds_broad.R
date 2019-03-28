@@ -51,7 +51,6 @@ hc_drug_gse <- union(broad_gse, creeds_gse) # 1987
 # --- map these to DRUGBANK --- #
 
 drugbank_data <- read.delim2("data/db_data/drugbank_parsed.txt")
-drugbank_df <- separate_rows(drugbank_data[,c("synonyms", "name", "dbID")], synonyms,sep=" \\| ") # TODO - turn this into a general purpose method
 
 drug_name_syn <- read.delim2("data/db_data/drugbank_vocab.txt")
 
@@ -112,7 +111,7 @@ head(table(max_mapping$name)[order(-table(max_mapping$name))], 40)
 # -- first: filter out RNAs, etc
 not_rna <- broad_comb_annot[!( oe_inst | kd_inst | normal_inst | rna_inst),] # 3966
 head(setdiff(not_rna$inst_info, max_mapping$inst_info), 20)
-View(broad_comb_annot[!broad_comb_annot$id %in% max_mapping$id,c("inst_info")])
+#View(broad_comb_annot[!broad_comb_annot$id %in% max_mapping$id,c("inst_info")])
 # do any of them map with a 3/4-letter mapping?
 mapping2 <- partial_join(filter(broad_comb_annot, !id %in% broad_mapped$id), drug_name_syn, by_x="inst_info", pattern_y="name")
 head(table(broad_mapped$name)[order(-table(broad_mapped$name))], 50)
@@ -120,19 +119,29 @@ head(table(broad_mapped$name)[order(-table(broad_mapped$name))], 50)
 
 
 # manual have drugbank IDs
-comb_c_b2 <- left_join(comb_c_b, drug_pert_manual[,c("id", "drugbank_id")])
 
 # automatic do not - these labels are effectively CRAP
  # 0. <-- do these map thru MESH?
  # count how many have an assoc PMID + MESH ID
-drug_pert_m
  # 1. download metadata and try to extract???
+drug_pert_auto2 <- separate_rows(drug_pert_auto, drug_name, sep="\\|")
+auto_mapped <- inner_join(drug_pert_auto2, drug_vocab2, c("drug_name"="name"))
+dim(auto_mapped)
+length(unique(auto_mapped$id)) # 2496 -- this is actually a fair number!
+
+drug_pert_manual2 <- rename(drug_pert_manual, "dbID"="drugbank_id")
+creeds_data2 <- rbind(drug_pert_manual2[, colnames(auto_mapped)], auto_mapped)
 
 
 # BROAD look interesting - I think we need to run str_detect on all of these?
 head(broad_comb_annot$inst_info)
+broad_mapped <- rename(broad_mapped, "geo_id"="GSE") 
+broad_mapped <- rename(broad_mapped, "drug_name"="name")
+overlapping_cols <- intersect(colnames(broad_mapped), colnames(creeds_data2))
+combined_df_drugbank <- rbind(creeds_data2[,overlapping_cols], broad_mapped[,overlapping_cols])
+dim(combined_df_drugbank)
 
-
+write.table(combined_df_drugbank, file="data/hc_combined_df_drugbank.txt", sep="\t", row.names=FALSE)
 
 # which are human
 require('GEOmetadb')

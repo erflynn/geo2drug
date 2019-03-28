@@ -30,10 +30,10 @@ ale_tiss <- data.frame("name" =unique(ale_data[,c("text_tissue_name")]), "tokens
 ale_tiss <- separate_rows(ale_tiss, tokens, sep=" ")
 ale_to_cl <- inner_join(ale_tiss, cl_df, by=c("tokens"="cl"))
 ale_to_cl2 <- inner_join(ale_tiss, cl_df, by=c("tokens"="syn"))
-ale_to_cl <- select(ale_to_cl, c("name", "tokens"))
+ale_to_cl <- ale_to_cl[, c("name", "tokens")]
 mapped1 <- ale_to_cl[!duplicated(ale_to_cl),]
 mapped1 <- rename(mapped1, "cl"="tokens")
-ale_to_cl2 <- select(ale_to_cl2, c("name", "cl"))
+ale_to_cl2 <- ale_to_cl2[, c("name", "cl")]
 mapped2 <- ale_to_cl2[!duplicated(ale_to_cl2),]
 
 text_to_cl <- rbind(mapped1, mapped2)
@@ -95,14 +95,33 @@ mapTextTissToCL <- function(text_name){
   return(NA)
 }
 
-cl_labels <- sapply(ale_data$text_tissue_name, mapTextTissToCL) # this is slow... speed up
-head(cl_labels)
-unique(filter(ale_data, cell_line==TRUE)$text_tissue_name)
+cl_labels <- sapply(unique(ale_data$text_tissue_name), mapTextTissToCL) # this is slow... speed up
+table(is.na(cl_labels))
+names(cl_labels) <- ale_data$text_tissue_name
+cl_labels2 <- cl_labels[!is.na(cl_labels)]
+cl_labels3 <- (cl_labels2[!duplicated(cl_labels2)]) # 447
+table(sapply(cl_labels3, length))
+# disambiguate these two, discard the rest
+cl_labels3$`U-373MG cell` <- "U-373MG ATCC"
+cl_labels3$`U-87MG cell` <- "U-87MG ATCC"
+
+cl_labels4 <- cl_labels3[sapply(cl_labels3, length) == 1]
+cl_df_ale <- data.frame(cbind("cell"=cl_labels4, "text_tissue_name"=names(cl_labels4)))
+head(ale_cl_mapping)
+
+
+# COMBINE THIS WITH THE OTHER DATA
+
+
+
+
+#unique(filter(ale_data, cell_line==TRUE)$text_tissue_name)
 
 # what is the count by sex
 comb <- inner_join(ale_cl_mapping, cell_info_df)
+dim(comb)
 table(comb$sex)
-
+write.table(comb, file="data/rough_cl_mapping.txt", sep="\t", row.names=FALSE)
 
 # load the MeSH IDs
 

@@ -16,7 +16,7 @@ names(list.drugs) <- lapply(drugbank, function(y) y$dbID)
 
 drugbank_df <- do.call(rbind,
                        lapply(drugbank, function(x) data.frame(
-                         lapply(x[c("synonyms","unii","name","cas","dbID","chebi" )], 
+                         lapply(x[c("synonyms","unii","name","cas","dbID","chebi" , "ATC")], 
                                 function(y) paste(y, collapse=" | ")), stringsAsFactors=FALSE)))
 # escape quotes
 drugbank_df$name <- sapply(drugbank_df$name, function(x) gsub( '\\"', "\\\'\'", x))
