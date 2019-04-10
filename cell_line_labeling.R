@@ -21,6 +21,8 @@ cl_df <- separate_rows(cl_df, syn, sep=";")
 cl_df$syn <- sapply(cl_df$syn, str_trim)
 cl_df$cl <- sapply(cl_df$cl, str_trim)
 
+
+
 # load the ALE labels - does this help?
 ale_data <- read.csv("../../drug_expression/drug_labeling/ale_processing/ale_combined_data.csv", stringsAsFactors = FALSE)
 cell_line_intersect <- intersect(sapply(ale_data$text_tissue_name, tolower), sapply(cell_lst, tolower)) # ok... not useful
@@ -72,6 +74,7 @@ cell_info_df <- do.call(rbind,
 cell_info_df$accession <- sapply(cell_info_df$accession, function(x) strsplit(x, " \\| ")[[1]][[1]])
 
 cell_info_df$cl <- names(cellosaurus)
+write.csv(cell_info_df, "data/db_data/cellosaurus_df.txt", row.names=FALSE)
 
 tiss_names <- sapply(unique(ale_data$text_tissue_name), function(x) strsplit(x, " ", fixed=TRUE)[[1]])
 overlap <- intersect(unlist(tiss_names), cell_lst) # 450 overlap!!!

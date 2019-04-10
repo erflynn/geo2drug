@@ -35,10 +35,30 @@ Put together the full dataframe
 comb_c_b <- read.csv("data/broad_creeds_annot_combined.csv")
 head(comb_c_b)
 
+# add organism annotations
+tail(comb_c_b)
+
+require("GEOmetadb")
+gses_list <- comb_c_b$GSE
+formatted_list_gses <- paste(gses_list, collapse="\', \'")
+con <- dbConnect(SQLite(),'../../drug_expression/dataset_identification/GEOmetadb.sqlite') # TODO move
+study_mapping <- dbGetQuery(con, 
+                            sprintf("SELECT gse, gpl.gpl, gpl.organism FROM gse_gpl JOIN gpl ON gpl.gpl = gse_gpl.gpl WHERE gse IN ('%s');", formatted_list_gses))
+
+require('tidyverse')
+comb_study <- inner_join(comb_c_b, study_mapping, by=c("GSE"="gse"))
+
+# add in the study counts if they're a drug study
+mouse_counts <- read.csv("../sex_labeling/data/mouse_rat/mouse_gse_counts.csv") %>% mutate("organism"="mouse")
+rat_counts <- read.csv("../sex_labeling/data/mouse_rat/rat_gse_counts.csv")  %>% mutate("organism"="rat")
+human_counts <- read.csv("../sex_labeling/data/mouse_rat/human_gse_counts.csv")  %>% mutate("organism"="human")
+mrh_counts <- do.call(rbind, list(mouse_counts, rat_counts, human_counts))
+study_w_counts <- inner_join(comb_study, mrh_counts, by=c("GSE"="gse"))
+head(study_w_counts)
+filter(study_w_counts, organism %in% c("Homo sapiens", "Mus musculus", "Rattus norvegicus"))
 ### PROBLEM - need to map all the data to drugbank annotations (or other?)
 comb_c_b2 <- read.delim("data/hc_combined_df_drugbank.txt")
-
-
+write.csv(study_w_counts[,c("GSE", "study_type", "organism.y", "source")], row.names=FALSE, file="combined_study_counts.csv")
 # separate this out
 comb_c_b2_ctl_df <- separate_rows(comb_c_b2, ctrl_ids, sep="\\|")
 comb_c_b2_pert_df <- separate_rows(comb_c_b2, pert_ids, sep="\\|")
