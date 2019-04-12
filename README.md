@@ -10,12 +10,13 @@ This code is used to extract relevant data from DrugBank, MeSH, and Cellosaurus
 * Pubmed XML: `parse_pubmed_xml.py`
 * Drugbank: `drugbank_synonyms.py`, `processDrugbank.R`: Extract drugbank data and synonyms
 * MeSH: `mesh_to_ids.py`, `condenseMeSH.R`: Downloads information from MeSH data
-* Cellosaurus: `parse_cellosaurus.py`: Parse cell line data from cellosaurus
+* Cellosaurus: `parse_cellosaurus.py`, `process_cell_df.R`: Parse cell line data from cellosaurus
 
 #### Data mapping:
 * `geo2pubmed_id.R`: Takes geo data, maps to mesh
 * `mesh2drugbank.R`: Maps MeSH IDs to drugbank
 * `extract_sex_labels.R`: Extract sex label data from drug mesh (run server-side after GSE download)
+* `cell_line_labeling.R`: labels cell line in all GSE metadata
 
 #### Data analysis:
 * `drug_gse_annot.Rmd`: Takes the results of the annotations and visualizes the results.
