@@ -7,6 +7,7 @@
 #  also: disease of origin, MESH/GEO accessions
 
 import xml.etree.ElementTree as ET
+import json
 
 cellFile = "data/db_data/cellosaurus.xml"
 tree = ET.parse(cellFile)
@@ -20,7 +21,7 @@ cl_dict = {} # dictionary for holding output
 for cl in cls:
 	# initialize variables
 	cl_sex, cl_category, cl_age, identifier, mesh_acc = "","","","",""
-	primary_acc, secondary_acc, synonyms, dzs, gex_list = [],[],[],[],[]
+	primary_acc, secondary_acc, synonyms, dzs, gex_list, species = [],[],[],[],[],[]
   
   # get age/sex/accessions
 	cl_sex = cl.get("sex")
@@ -58,6 +59,10 @@ for cl in cls:
 	if dz_list is not None:
 		dzs =[dz.text for dz in dz_list.findall("cv-term")]
 	
+	species_list = cl.find("species-list")
+	if species_list is not None:
+		species =[spec.text for spec in species_list.findall("cv-term")]
+	
 	# extract database mappings - Gene Expression databases
 	xref_l = cl.find("xref-list")
 	if xref_l is not None:
@@ -73,7 +78,7 @@ for cl in cls:
 					mesh_acc = xref.get("accession")
 	
 	# format the output
-	cl_dict[identifier] = {"dz":dzs, "sex": cl_sex, "category": cl_category, "age" : cl_age, \
+	cl_dict[identifier] = {"dz":dzs, "species":species, "sex": cl_sex, "category": cl_category, "age" : cl_age, \
 	 "synonyms": synonyms, "accession":acc_info, "mesh":mesh_acc, "gex": gex_list}
 
 
