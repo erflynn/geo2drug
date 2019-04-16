@@ -21,7 +21,7 @@ drug_data = [] # empty list
 for drug in treeDrugs:
   # initialize variables
 	dbID, drugName, drugCas, drugUnii, chebi_id, cat_label, meshid, atc_id = "","","","","","","",""
-	syn_list, category_list = [],[]
+	syn_list, category_list, group_list = [],[], []
 	
 	# get the primary ID and name
 	drugBankIDs = drug.findall("{http://www.drugbank.ca}drugbank-id")
@@ -39,8 +39,14 @@ for drug in treeDrugs:
 	unii = drug.find("{http://www.drugbank.ca}unii")
 	if unii is not None:
 		drugUnii = unii.text
-  # chebi mapping is in external identifiers
-  external_ids = drug.findall("{http://www.drugbank.ca}external-identifiers")[0].findall("{http://www.drugbank.ca}external-identifier")
+
+	groups = drug.findall("{http://www.drugbank.ca}groups")[0].findall("{http://www.drugbank.ca}group")
+	for group in groups:
+		if groups is not None:
+			group_list.append(group.text)
+
+	# chebi mapping is in external identifiers
+	external_ids = drug.findall("{http://www.drugbank.ca}external-identifiers")[0].findall("{http://www.drugbank.ca}external-identifier")
 	for external_id in external_ids:
 		resource = external_id.find("{http://www.drugbank.ca}resource")
 		if resource is not None:
@@ -70,7 +76,7 @@ for drug in treeDrugs:
 		atc_id = atc_code.get("code")
   
   # drug info json
-	drug_info = {"dbID":dbID, "name":drugName, "chebi": chebi_id, "cas":drugCas, "unii":drugUnii, "synonyms" :syn_list, "categories":category_list, "ATC":atc_id}
+	drug_info = {"dbID":dbID, "name":drugName, "group": group_list, "chebi": chebi_id, "cas":drugCas, "unii":drugUnii, "synonyms" :syn_list, "categories":category_list, "ATC":atc_id}
 	drug_data.append(drug_info)
 
 # json dump the whole thing
