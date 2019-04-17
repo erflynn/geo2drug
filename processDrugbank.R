@@ -25,12 +25,16 @@ drugbank_df$name <- sapply(drugbank_df$name, function(x) gsub( '\\"', "\\\'\'", 
 drugbank_df$synonyms <- sapply(drugbank_df$synonyms, function(x) gsub( '\\"', "\\\'\'", x))
 write.table(drugbank_df, file="data/db_data/drugbank_parsed.txt", sep="\t", row.names=FALSE)
 
-# remove data I don't want!
+# remove data I don't want! nutraceuticals + allergens
 drugbank_groups <- separate_rows(drugbank_df, group, sep="\\|")
-#drugbank_categories <- separate_rows(drugbank_df, categories, sep="\\|")
-#cat_table <- table(drugbank_categories$categories)
+drugbank_categories <- separate_rows(drugbank_df, categories, sep="\\|")
+cat_table <- table(drugbank_categories$categories)
+drugbank_categories$allergen <- drugbank_categories$categories=="Non-Standardized Food Allergenic Extract"
+#drugbank_categories$aa <- drugbank_categories$categories %in% c("Amino Acids, Basic", "Amino Acids, Essential")
 
-drugbank_no_nutra <- filter(drugbank_groups, group!="nutraceutical")
+drugbank_aa_allergen <- drugbank_categories %>% group_by(dbID, name) %>% summarize(discard=any(allergen))
+discard_dbs <- drugbank_aa_allergen$dbID[drugbank_aa_allergen$discard]
+drugbank_no_nutra <- filter(drugbank_groups, group!="nutraceutical" & !(dbID %in% discard_dbs))
 
 # --- CONSTRUCT DRUGBANK VOCABULARY --- #
 drug_name_syn <- createNameSynVocab(drugbank_no_nutra, "dbID")
