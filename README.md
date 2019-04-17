@@ -6,11 +6,12 @@
 The code in this repository is used for mapping GEO datasets to drugs (using DrugBank IDs or other).
 
 #### Database extraction:
-This code is used to extract relevant data from DrugBank, MeSH, and Cellosaurus
+This code is used to extract relevant data from DrugBank, MeSH, and Cellosaurus and GEO
 * Pubmed XML: `parse_pubmed_xml.py`
 * Drugbank: `drugbank_synonyms.py`, `processDrugbank.R`: Extract drugbank data and synonyms
 * MeSH: `mesh_to_ids.py`, `condenseMeSH.R`: Downloads information from MeSH data
 * Cellosaurus: `parse_cellosaurus.py`, `process_cell_df.R`: Parse cell line data from cellosaurus
+* GEO: `annot_geo_metadata.R`: grabs all of the GEO metadata
 
 #### Data mapping:
 * `geo2pubmed_id.R`: Takes geo data, maps to mesh
