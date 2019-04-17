@@ -12,6 +12,7 @@ This code is used to extract relevant data from DrugBank, MeSH, and Cellosaurus 
 * MeSH: `mesh_to_ids.py`, `condense_mesh.R`: Downloads information from MeSH data
 * Cellosaurus: `parse_cellosaurus.py`, `process_cell_df.R`: Parse cell line data from cellosaurus
 * GEO: `annot_geo_metadata.R`: grabs all of the GEO metadata
+All of the extracted data then goes into the `db_data` directory.
 
 #### Data mapping:
 * `geo2pubmed_id.R`: Takes geo data, maps to mesh

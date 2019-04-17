@@ -142,6 +142,6 @@ colnames(df) <- c("cell line", "mapped")
 table(df)
 
 
-write.table(mapped_all, file="data/cell_line_mapped_gse.txt", row.names=FALSE)
+write.table(mapped_all, file="data/labeled_data/cell_line_mapped_gse.txt", row.names=FALSE)
 gse_to_keep <- filter(mapped_all, !cell_line & is.na(cl))$gse
 write.table(data.frame(gse_to_keep), file="data/non_cell_line_gse.txt", row.names=FALSE)

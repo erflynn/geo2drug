@@ -54,12 +54,3 @@ createNameSynVocab <- function(df, id_col){
 
 
 
-labelDrugGSE <- function(gse_metadata){
-  # returns a drugbank ID of the drug in the gse metadata, or NA if none is present
-  
-}
-
-labelCellGSE <- function(gse_metadata){
-  # returns the cell line name of the data
-}
-
