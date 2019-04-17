@@ -16,7 +16,10 @@ This code is used to extract relevant data from DrugBank, MeSH, and Cellosaurus
 * `geo2pubmed_id.R`: Takes geo data, maps to mesh
 * `mesh2drugbank.R`: Maps MeSH IDs to drugbank
 * `extract_sex_labels.R`: Extract sex label data from drug mesh (run server-side after GSE download)
+
+### Data labeling:
 * `cell_line_labeling.R`: labels cell line in all GSE metadata
+* `searchMetadatDrugNames.R`: search the GSE study-level metadata for drug names
 
 #### Data analysis:
 * `drug_gse_annot.Rmd`: Takes the results of the annotations and visualizes the results.

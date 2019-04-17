@@ -54,11 +54,12 @@ createNameSynVocab <- function(df, id_col){
 
 
 
-drugbank_join <- function(df, col){
-  # takes a dataframe and adds a drugbank ID / name if it intersects with the column
-  
-  # load the drugbank data --> format into name/syn
-  
-  # map if
+labelDrugGSE <- function(gse_metadata){
+  # returns a drugbank ID of the drug in the gse metadata, or NA if none is present
   
 }
+
+labelCellGSE <- function(gse_metadata){
+  # returns the cell line name of the data
+}
+
