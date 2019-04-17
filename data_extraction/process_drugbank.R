@@ -1,8 +1,11 @@
-# processDrugbank.R
+# process_drugbank.R
 # E Flynn
 # 3/27/2019
 # 
 # Code for processing drugbank data --> data frame (condensed format) + vocab (long format)
+#   - filters out: nutraceuticals, allergens
+# TODO: consider filtering more
+
 
 require('rjson')
 require('tidyverse')

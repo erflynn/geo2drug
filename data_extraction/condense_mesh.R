@@ -1,4 +1,4 @@
-# condenseMeSH.R
+# condense_mesh.R
 # E Flynn
 # 2/27/2019
 # 
