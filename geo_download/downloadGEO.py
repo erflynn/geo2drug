@@ -2,7 +2,7 @@ import wrenlab.util.aspera
 
 import sys
 #from joblib import Parallel, delayed
-OUTDIR="/scratch/users/erflynn/sex_labeling/download_geo/gses/"
+OUTDIR="gses/"
 gse_file = sys.argv[1]
 
 def group_prefix(accession): # from wrenlab

@@ -7,12 +7,16 @@ The code in this repository is used for mapping GEO datasets to drugs (using Dru
 
 #### Database extraction:
 This code is used to extract relevant data from DrugBank, MeSH, and Cellosaurus and GEO
-* Pubmed XML: `parse_pubmed_xml.py`
 * Drugbank: `drugbank_synonyms.py`, `process_drugbank.R`: Extract drugbank data and synonyms
-* MeSH: `mesh_to_ids.py`, `condense_mesh.R`: Downloads information from MeSH data
 * Cellosaurus: `parse_cellosaurus.py`, `process_cell_df.R`: Parse cell line data from cellosaurus
 * GEO: `annot_geo_metadata.R`: grabs all of the GEO metadata
+      `geo_download`: contains server-side scripts for downloading all GSEs in a list
+* MetaSRA:
+[* Pubmed XML: `parse_pubmed_xml.py`]
+[* MeSH: `mesh_to_ids.py`, `condense_mesh.R`: Downloads information from MeSH data]
 All of the extracted data then goes into the `db_data` directory.
+
+
 
 #### Data mapping:
 * `geo2pubmed_id.R`: Takes geo data, maps to mesh
