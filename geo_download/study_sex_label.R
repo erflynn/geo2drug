@@ -4,7 +4,6 @@ require('massiR')
 require('miceadds')
 
 source("../runDownloadLabel/sex_lab_utils.R")
-source('run_chunks.R')
 
 options(stringsAsFactors=FALSE)
 
@@ -113,17 +112,23 @@ studySexLabel <- function(gse.obj){
 }
 
 runSexLab <- function(fname){
-  load.Rdata( sprintf("%s/%s", in_dir,fname), "chunk_ds")
+  load.Rdata( sprintf("%s/%s", in_dir, fname), "chunk_ds")
   gse.obj2 <- lapply(chunk_ds, function(x) studySexLabel(x))
-  return(gse.obj2)
+  chunk_ds <- gse.obj2
+  save(chunk_ds, sprintf("%s/%s", in_dir, fname)) # save the data in the same file
 }
 
 args <- commandArgs(trailingOnly=TRUE)
 chunk_num <- as.numeric(args[1])
 in_dir <- "gses/rObj"
-list.items <- list.files(in_dir)
-out_dir <- "gses/check_sex_lab"
+#list.items <- list.files(in_dir)
+list.items <- list.files(in_dir, sprintf("chunk%s_", chunk_num))
+#out_dir <- "gses/check_sex_lab"
 logfile <- sprintf("logs/%s_%s.log", "chunk_label", chunk_num)
 
-tmp <- chunkRun(list.items, runSexLab, out_dir, chunk_num, CHUNK_SIZE=100, GROUP_SIZE=10, log_prefix="chunk_label")
+for (i in 1:length(list.items)){
+  runSexLab(list.items[[i]])
+} 
+
+#tmp <- chunkRun(list.items, runSexLab, out_dir, chunk_num, CHUNK_SIZE=100, GROUP_SIZE=10, log_prefix="chunk_label")
   

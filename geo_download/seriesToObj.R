@@ -37,7 +37,7 @@ checkDownload <- function(fname){
     if (nrow(gse2$expr) < 10000){
       cat(sprintf("%s: fewer than 10k genes present on this platform\n", acc), file=logfile, append=TRUE)
     }
-    #save(gse2, file=sprintf("%s/%s.RData", out_dir, acc))
+    # TODO - write a happy message :/ 
     return(gse2)
   }, error = function(err){
     print(acc)
