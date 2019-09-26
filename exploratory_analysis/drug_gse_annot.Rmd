@@ -10,23 +10,25 @@ require('tidyverse')
 require('GEOmetadb')
 require('reshape2')
 options(stringsAsFactors=FALSE)
-source("drug_count_utils.R")
+source("../drug_count_utils.R")
+
 ```
 
 #### Load relevant data 
 ```{r}
 # text-based labels
-ale_data <- read.csv("../../drug_expression/drug_labeling/ale_processing/ale_combined_data.csv")
+ale_data <- read.csv("../../../drug_expression/drug_labeling/ale_processing/ale_combined_data.csv")
 
 # gse to mesh data
-gse_mesh_db <- read.delim("data/gse_mesh_db.txt")
+gse_mesh_db <- read.delim("../data/gse_mesh_db.txt")
 
 # expression-based labels
-label_mat <- read.csv("data/expr_label_mat.csv")
+label_mat <- read.csv("../data/expr_label_mat.csv")
 label_mat <- rename(label_mat, "gsm" ="X")
 
 # combine
 comb_labels <- left_join(label_mat, select(ale_data, c("gsm", "gse", "gpl", "text_sex", "text_tissue_name", "cell_line"))) 
+write.csv(comb_labels, file="../data/all_labels_drug.csv", row.names=FALSE)
 ```
 
 Check data overlap/size

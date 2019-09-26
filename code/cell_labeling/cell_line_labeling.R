@@ -9,7 +9,9 @@
 #  1) cell line is >= 3char and maps directly
 #  2) if <= 3 char: 
 #      THEN - must precede cell or cells or cell line
-#  also considered cell line if description contains this!
+#  also considered cell line if description contains the phrase "cell line"
+#
+# Note that this mapping is at the GSE and not GSM level.
 
 require('rjson')
 require('tidytext')
@@ -20,7 +22,7 @@ require('Hmisc')
 options(stringsAsFactors=FALSE)
 
 # ---- GSE data ---- #
-gse_data <- read.csv("data/db_data/gse_all_geo_info.csv")
+gse_data <- read.csv("data/sample_lists/gse_all_geo_info.csv")
 gse_data$str <-sapply(1:nrow(gse_data), function(i) {paste(gse_data[i,c("title", "summary", "overall_design")][!is.na(gse_data[i,c("title", "summary", "overall_design")])], collapse=" ")}) 
 gse_data$cell_line <- str_detect(gse_data$str, "cell line")
 #gsm_filt_w_gse <- fread("data/db_data/gsm_all_geo_info.csv")
@@ -44,13 +46,6 @@ cell_df2_short$cl <- sapply(cell_df2_short$cl, function(x) sprintf("%s cell", x)
 
 # --- GSE data --- # 
 
-# lowercase, - do not remove internal!!!
-#test <- c(' .name.1.','name.2','.name.3, ')
-#gsub(' [[:punct:]]|[[:punct:]] ', '', test)
-#gsub(";\t", " ", "kidney;\tkeywords")
-# convert cells --> cell for all long ones
-#gsub('cells', 'cell', x)
-
 # clean up text
 
 text_df <- gse_data[,c("gse", "str")]
@@ -67,15 +62,14 @@ comb_names <- inner_join(filter(cell_df2, nwords==1), gse_unigrams2, by=c("cl"="
 # filter for high TF
 cells <- unique(comb_names$cl )
 gse_map_counts <- gse_unigrams %>% filter (word %in% cells) %>% group_by(word) %>% summarise(total=n())  %>% arrange(desc(total))
+
 # selected by looking at gse_map_counts
 cl_stopwords <- c("cancer", "time", "center", "rare", "focus", "peak", "sage", "bona", "mast", "fisher", "bones", "patches", "madison", "ears", "chance", "cost")
 comb_names2 <- comb_names %>% filter(!cl %in% cl_stopwords)
 length(unique(comb_names$gse)) # 11251 out of 45036
 
 comb_data <- right_join(comb_names2[,c("accession", "cl", "gse")], gse_data[,c("gse", "cell_line")])
-
-
-write.table(comb_names2[,c("accession", "cl", "gse")], file="data/one_word_cell_mapping.txt", row.names=FALSE, sep="\t")
+write.table(comb_names2[,c("accession", "cl", "gse")], file="data/tmp/one_word_cell_mapping.txt", row.names=FALSE, sep="\t")
 
 
 # NOW SEARCH FOR LONGER STRINGS 
@@ -90,8 +84,8 @@ text_df2$str <- escapeRegex(text_df$str)
 cell_long2$cl <- sapply(escapeRegex(cell_long2$cl), function(x) sprintf(" %s ", str_trim(x)))
 
 # write these out - will join by exact match in python (so slow :,( )
-write.table(cell_long2[,c("accession", "cl")], file="data/multiword_cell.txt", row.names=FALSE, sep="\t")
-write.table(text_df2, file="data/gse_text.txt", row.names=FALSE, sep="\t")
+write.table(cell_long2[,c("accession", "cl")], file="data/tmp/multiword_cell.txt", row.names=FALSE, sep="\t")
+write.table(text_df2, file="data/tmp/gse_text.txt", row.names=FALSE, sep="\t")
 
 # bigrams, trigrams
 bigrams <- gse_data[,c("gse", "str")] %>% unnest_tokens(bigram, str, token = "ngrams",  n = 2)
@@ -117,16 +111,12 @@ mapped_two <- inner_join(bigrams_united, cell_two_words, c("bigram"="cl"))
 
 
 ## three ##
-
-# TODO - currently ignoring larger
-
 trigrams <- gse_data[,c("gse", "str")] %>% unnest_tokens(trigram, str, token = "ngrams", n = 3)
 cell_tri <- filter(cell_df2, nwords>=3) %>% unnest_tokens(cl, cl, token="ngrams", n=3)
 cell_three_words <- rbind(filter(cell_df2, nwords==3), cell_df2_short)
 mapped_three <- inner_join(trigrams, cell_three_words, c("trigram"="cl"))
 
 trigram_counts <- mapped_three %>% group_by(trigram) %>% summarise(total=n())  %>% arrange(desc(total))
-# may want to filter
 
 
 ### put together all the mapping
@@ -141,7 +131,7 @@ df <- data.frame(cbind(mapped_all$cell_line, !is.na(mapped_all$cl)))
 colnames(df) <- c("cell line", "mapped")
 table(df)
 
-
+# write out
 write.table(mapped_all, file="data/labeled_data/cell_line_mapped_gse.txt", row.names=FALSE)
 gse_to_keep <- filter(mapped_all, !cell_line & is.na(cl))$gse
-write.table(data.frame(gse_to_keep), file="data/non_cell_line_gse.txt", row.names=FALSE)
+write.table(data.frame(gse_to_keep), file="data/labeled_data/non_cell_line_gse.txt", row.names=FALSE)

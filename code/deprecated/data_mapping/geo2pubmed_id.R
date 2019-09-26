@@ -14,7 +14,7 @@
 require('tidyverse')
 require('GEOmetadb')
 require('rjson')
-source("drug_count_utils.R")
+source("../drug_count_utils.R")
 
 # --- get list of human GSEs, PMIDs ---- #
 con <- dbConnect(SQLite(),'../../drug_expression/dataset_identification/GEOmetadb.sqlite') 

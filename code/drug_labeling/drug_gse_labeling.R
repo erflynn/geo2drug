@@ -8,7 +8,7 @@ options(stringsAsFactors = FALSE)
 
 # read in the metadata
 # ---- GSE data ---- #
-gse_data <- read.csv("data/db_data/gse_all_geo_info.csv")
+gse_data <- read.csv("data/sample_lists/gse_all_geo_info.csv")
 gse_data$str <-sapply(1:nrow(gse_data), function(i) {paste(gse_data[i,c("title", "summary", "overall_design")][!is.na(gse_data[i,c("title", "summary", "overall_design")])], collapse=" ")}) 
 
 # ----- drug data ------ #
@@ -39,18 +39,39 @@ comb_names <- inner_join(filter(drug_info_df, nwords==1), gse_unigrams2, by=c("n
 length(unique(comb_names$gse)) 
 drugs <- unique(comb_names$name ) 
 gse_map_counts <- gse_unigrams %>% filter (word %in% drugs) %>% group_by(word) %>% summarise(total=n())  %>% arrange(desc(total))
-View(gse_map_counts)
 
-# TODO - decide if we are ok with discarding the list of stopwords from JAKE
+
+# try some bigrams
+bigrams <- gse_data[,c("gse", "str")] %>% unnest_tokens(bigram, str, token = "ngrams",  n = 2)
+trigrams <- gse_data[,c("gse", "str")] %>% unnest_tokens(trigram, str, token = "ngrams", n = 3)
+
+comb_names_bi <- inner_join(filter(drug_info_df, nwords==2), bigrams, by=c("name"="bigram")) %>% distinct()
+comb_names_tri <- inner_join(filter(drug_info_df, nwords==3), trigrams, by=c("name"="trigram")) %>% distinct()
+
 #  problem - discarding aa from the drugbank classification
-drug_stopwords <- c("same", "dmso", "water", "date", "sage", "atra", "camp", "saha", "balance", "date", "biotin")
+drug_stopwords <- c("same", "dmso", "water", "sage", "camp", "balance",  "biotin")
+# need to keep in ATRA, SAHA
+
+# pull in additional curated stopwords
 jake_stopwords <- read.delim("data/ref_data/jake_stopwords.txt", head=FALSE)$V1
 comb_names2 <- filter(select(comb_names, c("name", "dbID", "gse")), ! name  %in% union(drug_stopwords, jake_stopwords))
-length(unique(comb_names2$gse)) # 9392
-length(unique(comb_names2$name)) # 1208
+length(unique(comb_names2$gse)) # 9470
+length(unique(comb_names2$dbID)) # 1093
+
+
 
 # join with ATC
 comb_names3 <- left_join(comb_names2, drug_full_info[,c("dbID", "ATC")], by="dbID")
-write.table(comb_names3, file="data/labeled_data/drugbank_mapped_gse.txt", row.names=FALSE)
 
-# TODO: MAY WANT TO FILTER: glucose, oxygen, nitrogen, calcium
+# NOW TO DISAMBIGUATE - currently has synonymns as names
+drug_data_gse <- inner_join(drug_full_info[,c("dbID", "name")], select(comb_names3, c("dbID", "ATC", "gse")))
+
+
+drug2 <- filter(drug_data_gse, ! name %in% c("Glucose", "D-glucose", "Oxygen", "Nitrogen", "L-Glutamine", "Sucrose"))
+length(unique(drug2$dbID)) # [1] 1087
+length(unique(drug2$gse)) # [1] 8480
+
+write.table(drug_data_gse, file="data/labeled_data/drugbank_mapped_gse.txt", row.names=FALSE)
+
+
+

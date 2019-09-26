@@ -41,10 +41,29 @@ head(broad_comb_annot)
 head(creeds_data)
 broad_comb_annot <- rename(broad_comb_annot, "inst_info"="pert_label", "id"="sig_id", "ctrl_ids"="ctl_ids")
 broad_comb_annot$cell_type <- NA
+
+# remove some of the BROAD data 
+broad_comb_annot$inst_info <-sapply(broad_comb_annot$inst_info, tolower)
+
+# --- divide into drug exposures vs. other exposures vs. disease! --- #
+trt_inst <- str_detect(broad_comb_annot$inst_info, "treat|agent|before|after|expose")
+oe_inst <- str_detect(broad_comb_annot$inst_info, "overexp|over-exp")
+kd_inst <- str_detect(broad_comb_annot$inst_info, "knock|kd|deplete")
+normal_inst <- str_detect(broad_comb_annot$inst_info, "normal|control|healthy") 
+# TODO - problem, many of these are SWAPPED trt vs ctl
+#  for some it's also a hard call
+#  perhaps it was arbitrary to do AvsB
+
+rna_inst <- str_detect(broad_comb_annot$inst_info, "transfect|mir|sirna|transduce")
+not_rna <- broad_comb_annot[!( oe_inst | kd_inst | normal_inst | rna_inst),] # 3966
+View(broad_comb_annot[normal_inst,])
+
 creeds_data <- rename(creeds_data, "inst_info"="drug_name", "GSE"="geo_id")
 overlapping_cols <- intersect(colnames(creeds_data), colnames(broad_comb_annot))
+
 comb_c_b <- rbind(creeds_data[,overlapping_cols], broad_comb_annot[,overlapping_cols])
 write.csv(comb_c_b, file="data/broad_creeds_annot_combined.csv", row.names=FALSE)
+
 
 hc_drug_gse <- union(broad_gse, creeds_gse) # 1987
 
@@ -55,14 +74,7 @@ drugbank_data <- read.delim2("data/db_data/drugbank_parsed.txt")
 drug_name_syn <- read.delim2("data/db_data/drugbank_vocab.txt")
 
 # broad data
-broad_comb_annot$inst_info <-sapply(broad_comb_annot$inst_info, tolower)
 
-# --- divide into drug exposures vs. other exposures vs. disease! --- #
-trt_inst <- str_detect(broad_comb_annot$inst_info, "treat|agent|before|after|expose")
-oe_inst <- str_detect(broad_comb_annot$inst_info, "overexp|over-exp")
-kd_inst <- str_detect(broad_comb_annot$inst_info, "knock|kd|deplete")
-normal_inst <- str_detect(broad_comb_annot$inst_info, "normal|control|healthy") # a couple of these are treated
-rna_inst <- str_detect(broad_comb_annot$inst_info, "transfect|mir|sirna|transduce")
 #View(broad_comb_annot[normal_inst, c("inst_info", "ctl_label")])
 #View(broad_comb_annot[!(trt_inst | oe_inst | kd_inst | normal_inst | rna_inst), c("inst_info", "ctl_label")])
 

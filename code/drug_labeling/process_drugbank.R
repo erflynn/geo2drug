@@ -9,7 +9,7 @@
 
 require('rjson')
 require('tidyverse')
-source('drug_count_utils.R')
+source('code/utils/drug_count_utils.R')
 
 
 # load drugbank data and convert it into a data frame with one row per drug

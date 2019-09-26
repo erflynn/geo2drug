@@ -115,7 +115,7 @@ runSexLab <- function(fname){
   load.Rdata( sprintf("%s/%s", in_dir, fname), "chunk_ds")
   gse.obj2 <- lapply(chunk_ds, function(x) studySexLabel(x))
   chunk_ds <- gse.obj2
-  save(chunk_ds, sprintf("%s/%s", in_dir, fname)) # save the data in the same file
+  save(chunk_ds, file=sprintf("%s/%s", in_dir, fname)) # save the data in the same file
 }
 
 args <- commandArgs(trailingOnly=TRUE)
