@@ -2,7 +2,7 @@
 require('GEOmetadb')
 require('tidyverse')
 require('lubridate')
-#require('exprsex')
+require('exprsex')
 
 GEOMETADB_PATH <- "../GEOmetadb.sqlite" # downloaded 9/23/19
 

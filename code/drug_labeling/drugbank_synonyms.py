@@ -11,7 +11,7 @@
 import xml.etree.ElementTree as ET
 import json
 
-drugBankFile = "../../../spring2018/drug-target/DrugBank.xml"
+drugBankFile = "../../../spring2018/drug-target/DrugBank.xml" # TODO add to utils
 tree = ET.parse(drugBankFile) # slowest step
 root = tree.getroot()
 treeDrugs = root.findall("{http://www.drugbank.ca}drug")

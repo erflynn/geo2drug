@@ -39,27 +39,6 @@ countGPLs <- function(df) {
     arrange(desc(n))
 }
 
-#' Get the list of genes for a GPL
-#'
-#' @param gpl.name 
-#' @return list of genes formatted as a data frame with a column labeled "gene"
-getGenes <- function(gpl.name){
-  print(sprintf("Extracting genes from %s", gpl.name))
-  tryCatch({
-    gpl.obj <- getGEO(gpl.name)
-    gene_parse <- MetaIntegrator:::.GEO_fData_key_parser( gpl.obj@dataTable@table)
-    gene <- gene_parse$keys
-    gene <- gene[!is.na(gene)]
-    df <- data.frame(gene)
-    cleaned_df <- df %>% separate_rows(gene, sep=",") 
-    return(cleaned_df)
-  }, error = function(err){
-    print(sprintf("error loading %s", gpl.name))
-    return(data.frame("gene"=character()))
-  })
-
-}
-
 
 
 #' Extract genes from a list of platforms and filter by genes present
@@ -70,9 +49,16 @@ getGenes <- function(gpl.name){
 #' 
 #' @return the consensus gene list
 consensusGenes <- function(list.gpls, cutoff.n=4){
-  df <- do.call(rbind, lapply(list.gpls, getGenes)) 
+  list.gpls <- hs_count_gpls$gpl[1:8]
+  lists.genes <-  lapply(list.gpls, function(gpl) {
+    keys <- exprsex:::.getGenes(gpl);
+    gene.df <- exprsex:::.getGeneDf(keys); 
+    filtered.df <- gene.df %>% select(gene) %>% unique();
+    return(filtered.df)
+  }) 
+  df <- do.call(rbind,lists.genes) 
   print("Genes extracted, counting")
-  gene_counts <- df %>% group_by(gene) %>% mutate(n=n()) %>% filter(n >= cutoff.n) 
+  gene_counts <- df %>% group_by(gene) %>% mutate(n=n()) %>% unique() %>% filter(n >= cutoff.n) 
   return(unique(gene_counts$gene))
 }
 
@@ -106,3 +92,7 @@ rn_gene_list <- consensusGenes(rn_count_gpls$gpl[1:8])
 write_csv(data.frame(mm_gene_list),  "data/ref_data/mm_consensus_list.csv", col_names=FALSE)
 write_csv(data.frame(hs_gene_list),  "data/ref_data/hs_consensus_list.csv", col_names=FALSE)
 write_csv(data.frame(rn_gene_list),  "data/ref_data/rn_consensus_list.csv", col_names=FALSE)
+
+## TODO - there is something going wrong for rat and mouse :(
+
+
