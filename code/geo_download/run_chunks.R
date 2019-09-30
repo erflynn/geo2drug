@@ -1,5 +1,3 @@
-## parallelizing functions
-
 chunkRun <- function(list.items, my_function, out_dir, chunk_num, CHUNK_SIZE=100, GROUP_SIZE=10, log_prefix="chunk"){
   logfile <- sprintf("logs/%s_%s.log", log_prefix, chunk_num)
   cat(" \n", file=logfile)
@@ -13,7 +11,7 @@ chunkRun <- function(list.items, my_function, out_dir, chunk_num, CHUNK_SIZE=100
   
   NUM_GROUPS= ceiling((length(chunk_gses))/GROUP_SIZE)
   
-  # run in chunks, then save R object
+  # run in chunks of ten, then save
   for (i in 1:NUM_GROUPS){
     tryCatch({
       if (i==NUM_GROUPS){
@@ -29,7 +27,3 @@ chunkRun <- function(list.items, my_function, out_dir, chunk_num, CHUNK_SIZE=100
     })
   }
 }
-
-
-
-

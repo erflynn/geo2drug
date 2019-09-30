@@ -1,17 +1,23 @@
+# seriesToObj.R
+# E Flynn
+#
+# Code for converting a series matrix to a MetaIntegrator R object.
+# In the process, it checks for missing expression data, >30% NAs
 
 require('MetaIntegrator')
 require('GEOquery')
 require('RMySQL')
 
-in_dir <- "gses/matrix"
-out_dir <- "gses/rObj"
+
 MAX_NA_FRAC <- 0.3  
+MIN_GENES <- 10000
 
 options('GEOquery.inmemory.gpl'=TRUE)
 
 checkDownload <- function(fname){
   tryCatch({
     acc <- strsplit(fname, "_")[[1]][[1]] # parse the accession from the fname
+    print(acc)
     gse <- getGEO(filename=sprintf("%s/%s", in_dir, fname)) 
     gse2 <- MetaIntegrator:::.GEOqueryGEO2GEM(gse, acc, qNorm=FALSE) # from MetaIntegrator
     
@@ -31,17 +37,16 @@ checkDownload <- function(fname){
     num_cells <- sum(exp_count_nas)
     exp_na_frac <- ifelse('TRUE' %in% names(exp_count_nas), exp_count_nas[['TRUE']]/num_cells > MAX_NA_FRAC, FALSE)
     if (exp_na_frac){
-      cat(sprintf("%s: over 30 percent of expression data missing\n", acc), file=logfile, append=TRUE) # <-- this is a warning
-      
+      cat(sprintf("%s: over %d percent of expression data missing\n", acc, MAX_NA_FRAC*100), file=logfile, append=TRUE) # <-- this is a warning
     }
-    if (nrow(gse2$expr) < 10000){
-      cat(sprintf("%s: fewer than 10k genes present on this platform\n", acc), file=logfile, append=TRUE)
+    #save(gse2, file=sprintf("%s/%s.RData", out_dir, acc))
+    if (nrow(gse2$expr) < MIN_GENES){
+      cat(sprintf("%s: fewer than %s genes present on this platform\n", acc, MIN_GENES), file=logfile, append=TRUE)
     }
-    # TODO - write a happy message :/ 
     return(gse2)
   }, error = function(err){
     print(acc)
-    cat(sprintf("%s unknown error during sex labeling\n", acc), file=logfile, append=TRUE)
+    cat(sprintf("%s unknown error during conversion to obj\n", acc), file=logfile, append=TRUE)
     
     print(err)
     return(NA)
@@ -52,10 +57,42 @@ checkDownload <- function(fname){
 
 args <- commandArgs(trailingOnly=TRUE)
 chunk_num <- as.numeric(args[1])
+dir_id <- args[2]
+
+in_dir <- sprintf("gses_%s/matrix", dir_id)
+#out_dir <- sprintf("gses_%s/rObj", dir_id)
+
 
 fnames <- list.files(in_dir)
-logfile <- sprintf("logs/%s_%s.log", "chunk_check", chunk_num)
-tmp <- chunkRun(fnames, checkDownload, out_dir, chunk_num, CHUNK_SIZE=100, GROUP_SIZE=10, log_prefix="chunk_check")
+list.gses <- fnames
+logfile <- sprintf("logs_%s/check_chunk%s.log", dir_id, chunk_num)
+cat(" \n", file=logfile)
 
+CHUNK_SIZE=100
+if (chunk_num*CHUNK_SIZE > length(list.gses)){
+  chunk_gses <- list.gses[((chunk_num-1)*CHUNK_SIZE):length(list.gses)]
+} else {
+  chunk_gses <- list.gses[((chunk_num-1)*CHUNK_SIZE):(chunk_num*CHUNK_SIZE)]
+}
+print(chunk_gses)
 
+GROUP_SIZE = 10
+NUM_GROUPS= ceiling((length(chunk_gses))/GROUP_SIZE)
+
+# run in chunks of ten, then save
+for (i in 1:NUM_GROUPS){
+  tryCatch({
+  if (i==NUM_GROUPS){
+    chunk_gses_i <- chunk_gses[((i-1)*GROUP_SIZE+1):length(chunk_gses)]
+  } else {
+    chunk_gses_i <- chunk_gses[((i-1)*GROUP_SIZE+1):(i*GROUP_SIZE)]
+  }
+  chunk_gses_i <- chunk_gses_i[!is.na(chunk_gses_i)]
+  chunk_ds <- lapply(chunk_gses_i, checkDownload)
+  names(chunk_ds) <- chunk_gses_i
+  save(chunk_ds, file=sprintf("gses_%s/rObj/chunk%s_%s.RData", dir_id, chunk_num, i))
+}, error = function(err){
+    print(err)
+})
+}
 

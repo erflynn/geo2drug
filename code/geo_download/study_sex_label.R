@@ -1,3 +1,8 @@
+# study_sex_label.R
+# E Flynn
+# 
+# Code for running other sex labeling methods
+
 require('tidyverse')
 require('MetaIntegrator')
 require('massiR')
@@ -115,16 +120,17 @@ runSexLab <- function(fname){
   load.Rdata( sprintf("%s/%s", in_dir, fname), "chunk_ds")
   gse.obj2 <- lapply(chunk_ds, function(x) studySexLabel(x))
   chunk_ds <- gse.obj2
-  save(chunk_ds, file=sprintf("%s/%s", in_dir, fname)) # save the data in the same file
+  save(chunk_ds, file=sprintf("%s/%s", out_dir, fname)) # save the data in the same file
 }
 
 args <- commandArgs(trailingOnly=TRUE)
 chunk_num <- as.numeric(args[1])
-in_dir <- "gses/rObj"
+dir_id <- args[2]
+in_dir <- sprintf("gses_%s/rObj", dir_id)
 #list.items <- list.files(in_dir)
 list.items <- list.files(in_dir, sprintf("chunk%s_", chunk_num))
-#out_dir <- "gses/check_sex_lab"
-logfile <- sprintf("logs/%s_%s.log", "chunk_label", chunk_num)
+out_dir <- sprintf("gses_%s/sex_lab, dir_id)
+logfile <- sprintf("logs_%s/%s_%s.log", dir_id, "chunk_label", chunk_num)
 
 for (i in 1:length(list.items)){
   runSexLab(list.items[[i]])
