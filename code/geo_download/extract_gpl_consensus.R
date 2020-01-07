@@ -49,7 +49,6 @@ countGPLs <- function(df) {
 #' 
 #' @return the consensus gene list
 consensusGenes <- function(list.gpls, cutoff.n=4){
-  list.gpls <- hs_count_gpls$gpl[1:8]
   lists.genes <-  lapply(list.gpls, function(gpl) {
     keys <- exprsex:::.getGenes(gpl);
     gene.df <- exprsex:::.getGeneDf(keys); 
@@ -82,6 +81,11 @@ dbDisconnect(con)
 mm_count_gpls <- mm2 %>% countGPLs()
 rn_count_gpls <- rn2 %>% countGPLs()
 hs_count_gpls <- hs2 %>% countGPLs()
+
+write_csv(hs_count_gpls, "data/sample_lists/count_gpl_human.csv")
+write_csv(rn_count_gpls, "data/sample_lists/count_gpl_rn.csv")
+write_csv(mm_count_gpls, "data/sample_lists/count_gpl_mouse.csv")
+
 
 # get consensus genes for the top 8 platforms for each species
 mm_gene_list <- consensusGenes(mm_count_gpls$gpl[1:8])

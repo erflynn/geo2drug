@@ -40,4 +40,5 @@ Input:
 
 
 optional: To run sex labeling and filtering 
+   `Rscript extract_ale_sex_labels.R` to get all of the ALE sex labels
     `Rscript study_sex_label.R <chunk_num>`
