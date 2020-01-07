@@ -1,0 +1,122 @@
+
+
+```{r}
+require('tidyverse')
+
+```
+
+
+Prepare the datasets and join them together
+```{r}
+
+# GSE to cell line
+cl_mapped <- read.delim("data/labeled_data/cell_line_mapped_gse.txt", sep=" ")
+cl_mapped2 <- select(cl_mapped, c("gse", "accession"))
+cl_mapped3 <- filter(cl_mapped2, !is.na(accession)) %>% unique() # 15494
+
+# cell line to sex label
+cl_dat <- read.csv("data/db_data/cellosaurus_df.txt")
+cl_dat2 <- select(cl_dat, c("accession", "sex"))
+cl_dat2$sex <- tolower(cl_dat2$sex)
+cl_dat2$accession <- tolower(cl_dat2$accession)
+cl_dat2 <- rename(cl_dat2, annot_sex=sex)
+
+gse_to_cl_sex <- inner_join(cl_mapped3, cl_dat2) # 15495
+table(gse_to_cl_sex$annot_sex)
+
+gse_to_cl2 <- filter(gse_to_cl_sex, annot_sex %in% c("female", "male"))
+
+# sample to sex label
+sample_to_label <- read.csv("data/all_labels_drug.csv")
+sample_lab2 <- select(sample_to_label, c("gsm", "gse", "toker_sex", "massir_sex", "rank_sex", "text_sex"))
+sample_lab2$text_sex <- sapply(sample_lab2$text_sex, function(x) ifelse(x=="F", "female", ifelse(x=="M", "male", x))) # TODO - move this up
+samp_w_cl <- inner_join(sample_lab2, gse_to_cl2)
+
+```
+
+Look at the cell line sex labels - comparison plot. what is going on here?
+```{r}
+cell_line_sex <- samp_w_cl
+cell_line_sex <- rename(cell_line_sex, cl_sex=annot_sex)
+
+calcCLSexStats <- function(tab){
+  ncorrect <- tab["female", "female"] + tab["male", "male"]
+  nincorrect <-  tab["male", "female"] + tab["female", "male"]
+  return(list("correct"=ncorrect, "incorrect"=nincorrect))
+}
+
+table(cell_line_sex$text_sex==cell_line_sex$cl_sex) # filter
+calcCLSexStats(table(cell_line_sex[,c("text_sex", "cl_sex")]))
+table(cell_line_sex$massir_sex==cell_line_sex$cl_sex)
+calcCLSexStats(table(cell_line_sex[,c("massir_sex", "cl_sex")]))
+
+table(cell_line_sex$toker_sex==cell_line_sex$cl_sex)
+calcCLSexStats(table(cell_line_sex[,c("toker_sex", "cl_sex")]))
+
+table(cell_line_sex$rank_sex==cell_line_sex$cl_sex)
+calcCLSexStats(table(cell_line_sex[,c("rank_sex", "cl_sex")]))
+
+mismatched <- (cell_line_sex[cell_line_sex$rank_sex!=cell_line_sex$cl_sex,]) # 478
+table(mismatched[,c("rank_sex", "toker_sex", "cl_sex", "massir_sex")])
+dim(filter(mismatched, toker_sex==rank_sex | massir_sex==rank_sex)) # 255 - about half, probs not a significant portion
+possible_error <- filter(mismatched, toker_sex==rank_sex | massir_sex==rank_sex)
+likely_error <- filter(mismatched, toker_sex==rank_sex & massir_sex==rank_sex) # 108
+err_gses <- likely_error[,c("gse","cl_sex", "rank_sex")]  %>% unique()
+
+
+
+methods <- c("text", "toker", "massir", "rank")
+stat.df <- data.frame(do.call(rbind, lapply(methods, function(x) {
+  tab <- table(cell_line_sex[,c(paste(x, "sex", sep="_"), "cl_sex")])
+  res <- data.frame(calcCLSexStats(tab))
+  res$method <- x
+  return(res)
+  })))
+
+stat.df2 <- stat.df %>% mutate(labeled=correct+incorrect) %>% mutate(unlabeled=nrow(cell_line_sex)-labeled)
+
+# MELT
+require('reshape2')
+# create a figure
+melted.tab <- melt(stat.df2)
+melted.tab2 <- filter(melted.tab, variable!="labeled")
+
+# refactor
+melted.tab2$method <- factor(melted.tab2$method, c("text", "toker", "massir", "rank"))
+melted.tab2$variable <- factor(melted.tab2$variable, c("unlabeled", "incorrect", "correct"))
+
+ggplot(melted.tab2, aes(x=method, y=value, fill=variable))+geom_bar(stat="identity")+ylab("Number of samples")+theme(text = element_text(size=20))+ ggtitle("Sex Labeling of Cell lines")
+
+
+```
+
+```{r}
+err_w_annot <- inner_join(err_gses, cl_mapped3)
+unique(err_w_annot$accession)
+cl_dat$accession
+
+# what are the scores of the "normal" expression of these cell lines?
+```
+
+
+
+Subset the comparison plot by the HC data
+
+
+Redo analysis - how much of the trends we see in drug data is only in cell lines
+
+
+What are the super high quality tissue examples
+- can we compare this to the final results?
+
+
+Look at the cell line tissue labels - which do not match? What is going on here?
+  PROBLEM - no ground truth tissue labels
+
+```{r}
+
+
+```
+
+
+Grab a cross-section of 
