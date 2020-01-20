@@ -15,4 +15,4 @@ export PATH=${PATH}://scratch/users/erflynn/applications/python_packages//bin/
 
 i=$SLURM_ARRAY_TASK_ID
 i2=`printf "%02d" $i`
-python3 downloadGEO.py tmp_${ID}/gse${i2} ${ID}
+python3 00b_downloadGEO.py tmp_${ID}/gse${i2} ${ID}

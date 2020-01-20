@@ -4,7 +4,7 @@
 # 4/22/2019
 #
 # wrapper for downloading a lot of GSEs in parallel
-# takes as input a list of GSEs, downloads all to a specified directory
+# takes as input a list of GSEs, downloads all to a specified directory.
 
 ID=$1
 gse_list=$2  #'gse_for_silver_std.csv'
@@ -16,7 +16,7 @@ mkdir -p gses_${ID}/matrix
 split -l 100 -d ${gse_list} tmp_${ID}/gse
 NUM_JOBS=$(expr `(ls -l tmp_${ID}/gse* | wc -l)` - 1)
 echo $NUM_JOBS
-sbatch --array=0-${NUM_JOBS} download_geo_chunk.sh ${ID}
+sbatch --array=0-${NUM_JOBS} 00a_download_geo_chunk.sh ${ID}
 
 
 # after
