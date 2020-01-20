@@ -9,7 +9,7 @@
 import xml.etree.ElementTree as ET
 import json
 
-cellFile = "data/db_data/cellosaurus.xml"
+cellFile = "data/00_db_data/cellosaurus.xml"
 tree = ET.parse(cellFile)
 root = tree.getroot() 
 
@@ -83,6 +83,6 @@ for cl in cls:
 
 
 # write out the json
-with open("data/db_data/cellosaurus.json", 'w') as f:
+with open("data/00_db_data/cellosaurus.json", 'w') as f:
 	cl_str = json.dumps(cl_dict)
 	f.write(cl_str)

@@ -8,7 +8,5 @@
 
 ml R/3.6.1
 
-DATA_DIR="/scratch/users/erflynn/sex_labeling/geo_pipeline/data"
-IN_DIR=${DATA_DIR}/compare_labels/
-cd $IN_DIR;
-Rscript /scratch/users/erflynn/sex_labeling/geo_pipeline/code/combine_sex_lab.R $SLURM_ARRAY_TASK_ID
+
+Rscript code/02_process/02a_combine_sex_lab.R $SLURM_ARRAY_TASK_ID

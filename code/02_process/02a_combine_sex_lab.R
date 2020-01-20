@@ -1,8 +1,8 @@
 
-
+# combine the sex labels together
 
 require('tidyverse')
-out.dir <- "/scratch/users/erflynn/sex_labeling/geo_pipeline/data/keep_labels/"
+out.dir <- "data/03_silver_std/02_keep_labels/"
 
 
 
@@ -10,7 +10,7 @@ SIZE.CHUNK <- 100
 args <- commandArgs(trailingOnly=TRUE)
 idx <- as.numeric(args[1])
 
-all_f <- list.files()
+all_f <- list.files(path="data/03_silver_std/01_compare_labels/")
 NUM.CHUNKS <- ceiling(length(all_f)/SIZE.CHUNK)
 end_idx <- ifelse((NUM.CHUNKS-1) == idx ,length(all_f), (idx+1)*SIZE.CHUNK)
 

@@ -16,7 +16,7 @@ mkdir -p gses_${ID}/matrix
 split -l 100 -d ${gse_list} tmp_${ID}/gse
 NUM_JOBS=$(expr `(ls -l tmp_${ID}/gse* | wc -l)` - 1)
 echo $NUM_JOBS
-sbatch --array=0-${NUM_JOBS} 00a_download_geo_chunk.sh ${ID}
+sbatch --array=0-${NUM_JOBS} code/01_download/00a_download_geo_chunk.sh ${ID}
 
 
 # after

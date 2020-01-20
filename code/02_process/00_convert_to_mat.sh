@@ -8,7 +8,6 @@
 
 ml R/3.6.1
 
-DATA_DIR="/scratch/users/erflynn/sex_labeling/geo_pipeline/data"
-GSE_FILE=${DATA_DIR}/sample_lists/gse_for_silver_std_human.csv
-OUT_DIR=${DATA_DIR}/silver_std/
-Rscript gse_to_mat.R $GSE_FILE $OUT_DIR $SLURM_ARRAY_TASK_ID
+GSE_FILE=data/01_sample_lists/gse_for_silver_std_human.csv
+OUT_DIR=data/03_silver_std/00_mat_files/
+Rscript code/02_process/00a_gse_to_mat.R $GSE_FILE $OUT_DIR $SLURM_ARRAY_TASK_ID

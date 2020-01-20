@@ -10,9 +10,12 @@ ml python/3.6.1
 
 ID=$1
 
-export PYTHONPATH=${PYTHONPATH}:/scratch/users/erflynn/applications/python_packages/lib/python3.6/site-packages/
-export PATH=${PATH}://scratch/users/erflynn/applications/python_packages//bin/
+#export PYTHONPATH=${PYTHONPATH}:/scratch/users/erflynn/applications/python_packages/lib/python3.6/site-packages/
+#export PATH=${PATH}:/scratch/users/erflynn/applications/python_packages//bin/
 
 i=$SLURM_ARRAY_TASK_ID
 i2=`printf "%02d" $i`
-python3 00b_downloadGEO.py tmp_${ID}/gse${i2} ${ID}
+python3 code/01_download/00b_downloadGEO.py tmp_${ID}/gse${i2} ${ID}
+
+# clean up
+rm tmp_${ID}/gse${i2}

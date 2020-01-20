@@ -8,7 +8,7 @@ Then, we download and sex label all data.
 
 The code directory is set up as follows:
 
-`00_annot/`
+#### `00_annot/`
   1. GEO metadata is downloaded using `00_get_list_all_gse.R`
    - output: (in `data/01_sample_lists/`)
     * `<>_gse_gsm.csv`
@@ -34,12 +34,29 @@ The code directory is set up as follows:
      - uses `data/01_sample_lists/gse_all_geo_info.csv`
      - output: `data/02_labeled_data/drugbank_mapped_gse.txt` 
 
-`01_download/`
+#### `01_download/`
   This uses the NCBI aspera client and relies on wrenlab software packages and is slightly complicated to install.
   `sbatch 00_download_gse_wrapper.sh ${ID} ${GSE_LIST}`
 
-This runs `download_geo_chunk.sh` which runs `downloadGEO.py` for each individual GSE.
-We do this for ID=["mouse", "rat", and "human"], and use the files "data/sample_lists/gse_${ID}.csv". 
+  This runs `download_geo_chunk.sh` which runs `downloadGEO.py` for each individual GSE.
+  We do this for ID=["mouse", "rat", and "human"], and use the files "data/sample_lists/gse_${ID}.csv". 
+
+// TODO: download GPL scripts
+
+#### `02_process/`
+  This directory processes downloaded GSEs using exprsex based on a reference list of files.
+  * `00_convert_to_mat.sh`
+  * `01_label_mat.sh`
+  * `02_combine_mat.sh`
+  * `03_train_test_divide.R`
+  * `04_run_meta.sh`
+  * `05_train_test_mat.sh`
+ 
 
 
-`02_process/`
+
+
+Required files:
+ - GEOMetadb (update GEOMetadb in utils path to this)
+ - drugbank and cellosaurus XML in the `00_db_data` directory
+ - jake_stopwords file

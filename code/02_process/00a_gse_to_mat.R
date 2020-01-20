@@ -5,8 +5,8 @@
 require('exprsex')
 require('MetaIntegrator')
 
-GSE.DIR <- "/scratch/users/erflynn/sex_labeling/geo_pipeline/gses/human/matrix/"
-GPL.DIR <- "/scratch/users/erflynn/sex_labeling/geo_pipeline/gpl_ref/human/"
+GSE.DIR <- "gses/human/matrix/"
+GPL.DIR <- "gpl_ref/human/"
 SIZE.CHUNK <- 50
 
 # parse arguments

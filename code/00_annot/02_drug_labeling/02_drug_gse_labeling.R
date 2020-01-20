@@ -8,13 +8,13 @@ options(stringsAsFactors = FALSE)
 
 # read in the metadata
 # ---- GSE data ---- #
-gse_data <- read.csv("data/sample_lists/gse_all_geo_info.csv")
+gse_data <- read.csv("data/01_sample_lists/gse_all_geo_info.csv")
 gse_data$str <-sapply(1:nrow(gse_data), function(i) {paste(gse_data[i,c("title", "summary", "overall_design")][!is.na(gse_data[i,c("title", "summary", "overall_design")])], collapse=" ")}) 
 
 # ----- drug data ------ #
 # create the synonym DF
-drug_full_info <- read.delim("data/db_data/drugbank_parsed.txt")
-drug_info_df <- read.delim("data/db_data/drugbank_vocab_no_nutra.txt")
+drug_full_info <- read.delim("data/00_db_data/drugbank_parsed.txt")
+drug_info_df <- read.delim("data/00_db_data/drugbank_vocab_no_nutra.txt")
 
 # only match drug data with more than 3 characters and 1 word 
 #  TODO - what about drugs that are phrases?
@@ -53,7 +53,7 @@ drug_stopwords <- c("same", "dmso", "water", "sage", "camp", "balance",  "biotin
 # need to keep in ATRA, SAHA
 
 # pull in additional curated stopwords
-jake_stopwords <- read.delim("data/ref_data/jake_stopwords.txt", head=FALSE)$V1
+jake_stopwords <- read.delim("data/00_db_data/jake_stopwords.txt", head=FALSE)$V1
 comb_names2 <- filter(select(comb_names, c("name", "dbID", "gse")), ! name  %in% union(drug_stopwords, jake_stopwords))
 length(unique(comb_names2$gse)) # 9470
 length(unique(comb_names2$dbID)) # 1093
@@ -71,7 +71,7 @@ drug2 <- filter(drug_data_gse, ! name %in% c("Glucose", "D-glucose", "Oxygen", "
 length(unique(drug2$dbID)) # [1] 1087
 length(unique(drug2$gse)) # [1] 8480
 
-write.table(drug_data_gse, file="data/labeled_data/drugbank_mapped_gse.txt", row.names=FALSE)
+write.table(drug_data_gse, file="data/02_labeled_data/drugbank_mapped_gse.txt", row.names=FALSE)
 
 
 

@@ -8,22 +8,22 @@ require('MetaIntegrator')
 require('massiR')
 require('miceadds')
 
-source("../sex_lab_utils.R")
+source("code/utils/sex_lab_utils.R")
 
 options(stringsAsFactors=FALSE)
-combined_data2 <- read.csv("../../data/ale_combined_data.csv") ##
+combined_data2 <- read.csv("data/ale_combined_data.csv") ##
 larger_annot2 <- combined_data2
 larger_annot2$text_sex <- sapply(larger_annot2$text_sex, function(x)
   ifelse(x=="M", "male", ifelse(x=="F", "female", x)))
 
-miceadds::load.Rdata("../../gpl_ref/human_xy_genes.RData", "xy_genes") 
+miceadds::load.Rdata("gpl_ref/human_xy_genes.RData", "xy_genes") 
 xy_genes2 <- xy_genes %>% unique() %>% filter(!is.na(gene))
 x_genes <- xy_genes2 %>% filter(chr=="X") %>% dplyr::select(gene)
 y_genes <- xy_genes2 %>% filter(chr=="Y") %>% dplyr::select(gene)
 
 xy_genes2.2 <- xy_genes2$gene
 
-miceadds::load.Rdata("../../gpl_ref/human_gene_map.RData", "gene_map")
+miceadds::load.Rdata("gpl_ref/human_gene_map.RData", "gene_map")
 toker_list <- c("XIST", "KDM5D", "RPS4Y1")
 toker_list2 <- gene_map %>% filter(hgnc_symbol %in% toker_list) %>% dplyr::select(hgnc_symbol, entrezgene_id) %>% unique()
 toker_list2.2 <- toker_list2$entrezgene_id
@@ -119,7 +119,7 @@ idx <- as.numeric(args[3])
 print(idx)
 logfile <- "tmp.log"
 out_dir <- OUT.DIR
-MAT.DIR <- "../../data/silver_std/"
+MAT.DIR <- "data/03_silver_std/00_mat_files/"
 
 
 

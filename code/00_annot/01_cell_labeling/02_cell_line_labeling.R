@@ -22,14 +22,14 @@ require('Hmisc')
 options(stringsAsFactors=FALSE)
 
 # ---- GSE data ---- #
-gse_data <- read.csv("data/sample_lists/gse_all_geo_info.csv")
+gse_data <- read.csv("data/01_sample_lists/gse_all_geo_info.csv")
 gse_data$str <-sapply(1:nrow(gse_data), function(i) {paste(gse_data[i,c("title", "summary", "overall_design")][!is.na(gse_data[i,c("title", "summary", "overall_design")])], collapse=" ")}) 
 gse_data$cell_line <- str_detect(gse_data$str, "cell line")
-#gsm_filt_w_gse <- fread("data/db_data/gsm_all_geo_info.csv")
+#gsm_filt_w_gse <- fread("data/00_db_data/gsm_all_geo_info.csv")
 
 # ----- cell line data ------ #
 # create the synonym DF
-cell_info_df <- read.csv("data/db_data/cellosaurus_df.txt")
+cell_info_df <- read.csv("data/00_db_data/cellosaurus_df.txt")
 cell_lab <- cell_info_df %>% separate_rows(synonyms, sep="\\|") %>% select(synonyms, accession, cl)
 cell_lab2 <- data.frame(apply(cell_lab, c(1,2) , function(x) str_trim(tolower(x))))
 cell_lab_syn <- cell_lab2 %>% select(accession, synonyms) %>% filter(synonyms != "") 
@@ -69,7 +69,7 @@ comb_names2 <- comb_names %>% filter(!cl %in% cl_stopwords)
 length(unique(comb_names$gse)) # 11251 out of 45036
 
 comb_data <- right_join(comb_names2[,c("accession", "cl", "gse")], gse_data[,c("gse", "cell_line")])
-write.table(comb_names2[,c("accession", "cl", "gse")], file="data/tmp/one_word_cell_mapping.txt", row.names=FALSE, sep="\t")
+write.table(comb_names2[,c("accession", "cl", "gse")], file="data/tmp_one_word_cell_mapping.txt", row.names=FALSE, sep="\t")
 
 
 # NOW SEARCH FOR LONGER STRINGS 
@@ -85,7 +85,7 @@ cell_long2$cl <- sapply(escapeRegex(cell_long2$cl), function(x) sprintf(" %s ", 
 
 # write these out - will join by exact match in python (so slow :,( )
 write.table(cell_long2[,c("accession", "cl")], file="data/tmp/multiword_cell.txt", row.names=FALSE, sep="\t")
-write.table(text_df2, file="data/tmp/gse_text.txt", row.names=FALSE, sep="\t")
+write.table(text_df2, file="data/tmp_gse_text.txt", row.names=FALSE, sep="\t")
 
 # bigrams, trigrams
 bigrams <- gse_data[,c("gse", "str")] %>% unnest_tokens(bigram, str, token = "ngrams",  n = 2)
@@ -132,6 +132,6 @@ colnames(df) <- c("cell line", "mapped")
 table(df)
 
 # write out
-write.table(mapped_all, file="data/labeled_data/cell_line_mapped_gse.txt", row.names=FALSE)
+write.table(mapped_all, file="data/02_labeled_data/cell_line_mapped_gse.txt", row.names=FALSE)
 gse_to_keep <- filter(mapped_all, !cell_line & is.na(cl))$gse
-write.table(data.frame(gse_to_keep), file="data/labeled_data/non_cell_line_gse.txt", row.names=FALSE)
+write.table(data.frame(gse_to_keep), file="data/02_labeled_data/non_cell_line_gse.txt", row.names=FALSE)

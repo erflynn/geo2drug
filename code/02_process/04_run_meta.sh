@@ -8,4 +8,4 @@
 
 ml R/3.6.1
 
-Rscript run_meta.R
+Rscript code/02_process/04a_run_meta.R

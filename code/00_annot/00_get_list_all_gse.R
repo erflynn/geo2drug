@@ -5,7 +5,7 @@
 # Grab all the GEOMetadb data for mouse, rat, and human at the GSM, GSE level.
 # Deduplicate by mapping each sample to the earliest study it is present in.
 
-source("../utils/labeling_utils.R")
+source("code/utils/labeling_utils.R")
 
 
 # download all data at the gsm level and filter for containing the species of interest
@@ -94,7 +94,7 @@ rat_mouse <- intersect(mm$gsm, rn$gsm) # none
 
 # mult_org_dat
 #   gsm gse gpl organism mult_resolved?
-write_csv(data.frame(human_mouse),"../../data/sample_lists/multiple_organism_data.csv" )
+write_csv(data.frame(human_mouse),"data/01_sample_lists/multiple_organism_data.csv" )
 
 gse_list <- c(rn$gse, hs$gse, mm$gse) 
 
@@ -118,7 +118,7 @@ mapped_to_earliest <- sample_study_date %>%
   group_by(gsm) %>% 
   summarize(gse= gse[which.min(submission_date)]) # SLOW
 
-write_csv(mapped_to_earliest, "../../data/sample_lists/gse_gsm_all_geo_dedup.csv")
+write_csv(mapped_to_earliest, "data/01_sample_lists/gse_gsm_all_geo_dedup.csv")
 
 
 gse_list2 <- unique(mapped_to_earliest$gse)
@@ -138,7 +138,7 @@ gse_data_org <- left_join(gse_data, select(combined_gsm_gse, gse, organism_ch1),
   as_tibble()
 
 
-write_csv(gse_data_org, "../../data/sample_lists/gse_all_geo_info.csv")
+write_csv(gse_data_org, "data/01_sample_lists/gse_all_geo_info.csv")
 
 # filter and write out the mouse, rat, and human data
 mm2 <- inner_join(mm, mapped_to_earliest, by=c("gsm", "gse"))  %>% 
@@ -152,13 +152,13 @@ hs2 <- inner_join(hs, mapped_to_earliest, by=c("gsm", "gse")) %>%
   select( gse, gsm, everything())
 
 
-mm2 %>% write_csv("../../data/sample_lists/mouse_gse_gsm.csv")
-rn2 %>% write_csv("../../data/sample_lists/rat_gse_gsm.csv")
-hs2 %>% write_csv("../../data/sample_lists/human_gse_gsm.csv")
+mm2 %>% write_csv("data/01_sample_lists/mouse_gse_gsm.csv")
+rn2 %>% write_csv("data/01_sample_lists/rat_gse_gsm.csv")
+hs2 %>% write_csv("data/01_sample_lists/human_gse_gsm.csv")
 
-mm2 %>% select(gse) %>% unique() %>% write_csv("../../data/sample_lists/gse_mouse.csv")
-rn2 %>% select(gse) %>% unique() %>% write_csv("../../data/sample_lists/gse_rat.csv")
-hs2 %>% select(gse) %>% unique() %>% write_csv("../../data/sample_lists/gse_human.csv")
+mm2 %>% select(gse) %>% unique() %>% write_csv("data/01_sample_lists/gse_mouse.csv")
+rn2 %>% select(gse) %>% unique() %>% write_csv("data/01_sample_lists/gse_rat.csv")
+hs2 %>% select(gse) %>% unique() %>% write_csv("data/01_sample_lists/gse_human.csv")
 
 
 
