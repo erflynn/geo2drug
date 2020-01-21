@@ -8,5 +8,5 @@
 
 ml R/3.6.1
 
-ORGANISM="human"
+ORGANISM=$1
 Rscript code/02_process/05b_test_mat.R ${ORGANISM} $SLURM_ARRAY_TASK_ID
