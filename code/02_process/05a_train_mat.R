@@ -8,7 +8,7 @@ organism <- args[1]
 
 ##### ----- CONSTRUCT THE TRAIN MATRICES ----- ####
 train_dat <- read_csv(sprintf("data/01_sample_lists/%s_training.csv", organism))
-load(sprintf("data/03_silver_std/%s/03_out_mat/metaObj.RData", organism)) # --> metaObject
+load(sprintf("data/03_silver_std/%s/04_meta_res/metaObj.RData", organism)) # --> metaObject
 
 # iterate through the gses
 train.gses <- unique(train_dat$gse)

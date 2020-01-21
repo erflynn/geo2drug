@@ -44,8 +44,8 @@ names(list.train.obj) <- list.gses
 # now run meta-integrator on this!
 metaObject <- list("originalData"=list.train.obj[!is.na(list.train.obj)])
 
-save(metaObject, file=sprintf("data/03_silver_std/%s/03_out_mat/input_metaObj.RData", organism))
+save(metaObject, file=sprintf("data/03_silver_std/%s/04_meta_res/input_metaObj.RData", organism))
 metaObject <- runMetaAnalysis(metaObject)
-save(metaObject, file=sprintf("data/03_silver_std/%s/03_out_mat/metaObj.RData", organism)  )
+save(metaObject, file=sprintf("data/03_silver_std/%s/04_meta_res/metaObj.RData", organism)  )
 
 
