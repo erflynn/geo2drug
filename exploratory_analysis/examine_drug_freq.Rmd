@@ -16,7 +16,7 @@ options(stringsAsFactors = FALSE)
 
 Load and put together data
 ```{r}
-gse_mesh_db <- read.delim("data/gse_mesh_db.txt")
+gse_mesh_db <- read.delim("data/tmp/gse_mesh_db.txt")
 
 # add drugbank names + ATC codes
 drugbank <- fromJSON(file="data/db_data/drugbank_info.json") 
@@ -61,8 +61,8 @@ ggplot(atc_info, aes(x=class, y=count, fill=descript))+geom_histogram(stat="iden
 
 Breakdown by ATC class for single, multi-sex
 ```{r}
-count.per.study <- read.delim("data/sex_counts_per_study.txt")
-tiss_dat <- read.delim("data/study_tissue_breakdown.txt")
+count.per.study <- read.delim("data/tmp/sex_counts_per_study.txt")
+tiss_dat <- read.delim("data/tmp/study_tissue_breakdown.txt")
 study_tiss_count <- left_join(count.per.study, tiss_dat)
 
 gse_w_study_info <- left_join(gse_mesh_db2, count.per.study) 
@@ -71,7 +71,11 @@ gse_w_study_info$class <- sapply(gse_w_study_info$ATC, function(x) ifelse(x=="",
 gse_w_study_info2 <- left_join(gse_w_study_info, atc_names)
 
 write.csv(gse_w_study_info2, "data/gse_w_study_info_0207.csv", row.names=FALSE, quote=TRUE)
-ggplot(filter(gse_w_study_info2, !is.na(study_type) & !is.na(descript)), aes(x=class, fill=descript))+geom_histogram(stat="count")+ggtitle("ATC breakdown")+facet_grid(study_type ~ .)+theme(text = element_text(size=20))
+gse_w_study_info3 <- gse_w_study_info2 %>% rename(drug_class=descript)
+ggplot(filter(gse_w_study_info3, !is.na(study_type) & !is.na(drug_class)), aes(x=class, fill=drug_class))+geom_histogram(stat="count")+ggtitle("ATC breakdown")+facet_grid(study_type ~ .)+theme(text = element_text(size=20))+theme_bw() + theme( panel.grid.major = element_blank(),
+                      panel.grid.minor = element_blank()) + ylab("Number of studies")+xlab("ATC class")
+ggsave(file="data/smok_dat/atc_drug.png", dpi="retina", width=8, height=4)
+
 head(data.frame("count"=summary(as.factor(filter(gse_w_study_info2, study_type=="f")$name))), 10)
 head(data.frame("count"=summary(as.factor(filter(gse_w_study_info2, study_type=="m")$name))), 10)
 head(data.frame("count"=summary(as.factor(filter(gse_w_study_info2, study_type=="both")$name))), 10)
@@ -106,7 +110,14 @@ drug_w_date$Month <-as.Date(cut(as.Date(drug_w_date$submission_date), breaks = "
 drug_w_date$Year <-as.Date(cut(as.Date(drug_w_date$submission_date), breaks = "year"))
 year_counts <- filter(drug_w_date, !is.na(study_type)) %>% group_by(Year, study_type) %>% summarize(num_per_year=n())
 
-ggplot(year_counts, aes(x=Year, y=num_per_year, fill=study_type)) + geom_histogram(stat="identity", position="dodge")+ylab("Number of studies per year")+theme(text = element_text(size=20))
+year_counts2 <- year_counts %>% ungroup %>%
+  mutate(study_sex=ifelse(study_type=="m", "male", ifelse(study_type=="f", "female", "both"))) %>%
+  mutate(study_sex=factor(study_sex, levels=c("female", "both", "male")))
+
+ggplot(year_counts2, aes(x=Year, y=num_per_year, fill=study_sex)) + geom_histogram(stat="identity", position="dodge")+ylab("Number of studies per year")+theme_bw() + theme( panel.grid.major = element_blank(),
+                      panel.grid.minor = element_blank())
+
+ggsave(file="data/smok_dat/figures/drug_by_year.png", dpi="retina", width=5, height=3)
 ```
 
 
