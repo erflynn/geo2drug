@@ -29,6 +29,7 @@ mult_gpl <- all_dat2 %>%
 single_gpl <- all_dat2 %>%
   filter(!str_detect(gse, "-")) %>% select(gse) %>% unique()
 
+# write the GPL info out for later
 gse_info <- read_csv(sprintf("data/01_sample_lists/gse_for_silver_std_%s.csv", organism))
 
 gse_info_s <- gse_info %>% filter(gse %in% single_gpl$gse)
@@ -37,6 +38,7 @@ gse_info_m <- gse_info %>% separate_rows(gpl, sep="\\|") %>% semi_join(mult_gpl)
 gse_info_m2 <- gse_info_m %>% mutate(gse=sprintf("%s-%s", gse, gpl))
 
 gse_info2 <- rbind(gse_info_s, gse_info_m2)
+write_csv(gse_info2, sprintf("data/01_sample_lists/%s_gse_info.csv", organism))
 
 set.seed(2)
 gse_info2$rand.int <- sample(1:nrow(gse_info2), nrow(gse_info2), replace=FALSE)

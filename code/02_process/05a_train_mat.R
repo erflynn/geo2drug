@@ -44,7 +44,9 @@ train_lab <- lapply(names(trainIn), function(gse) {
 # output: gse, gsm, class label
 train_lab2 <- do.call(rbind, train_lab)
 
-write_csv(train_expr2, sprintf("data/03_silver_std/%s/03_out_mat/train_expr.csv", organism))
-write_csv(train_rank2, sprintf("data/03_silver_std/%s/03_out_mat/train_rank.csv", organism))
+# we have to use write.csv to keep the rownames -- can grab them later if we want from
+# consensus genes but it is something to be aware of
+write.csv(train_expr2, file=sprintf("data/03_silver_std/%s/03_out_mat/train_expr.csv", organism))
+write.csv(train_rank2, file=sprintf("data/03_silver_std/%s/03_out_mat/train_rank.csv", organism))
 write_csv(train_lab2, sprintf("data/03_silver_std/%s/03_out_mat/train_lab.csv", organism))
 
