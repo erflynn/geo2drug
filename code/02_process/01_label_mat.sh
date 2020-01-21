@@ -8,7 +8,8 @@
 
 ml R/3.6.1
 
-
-GSE_FILE=data/01_sample_lists/gse_for_silver_std_human.csv
-OUT_DIR=data/03_silver_std/02_compare_labels/
-Rscript code/02_process/01a_study_sex_label.R $GSE_FILE $OUT_DIR  $SLURM_ARRAY_TASK_ID
+ORGANISM=$1
+GSE_FILE=data/01_sample_lists/gse_for_silver_std_${ORGANISM}.csv
+OUT_DIR=data/03_silver_std/${ORGANISM}/01_compare_labels/
+mkdir -p $OUT_DIR
+Rscript code/02_process/01a_study_sex_label.R $GSE_FILE $OUT_DIR $ORGANISM $SLURM_ARRAY_TASK_ID

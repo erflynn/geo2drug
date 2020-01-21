@@ -3,52 +3,30 @@
 require('MetaIntegrator')
 require('tidyverse')
 
+consensus_genes <- read.csv("data/consensus_genes.csv")
+consensus.genes <- sapply(consensus_genes$consensus.genes, as.character)
 
-##### ----- CONSTRUCT THE TRAIN MATRICES ----- ####
+SIZE.CHUNK <- 20
+args <- commandArgs(trailingOnly=TRUE)
+organism <- args[1]
+idx <- as.numeric(args[2])
 
-load("data/03_silver_std/03_out_mat/metaObj.RData") # --> metaObject
+test_dat <- read_csv("data/01_sample_lists/human_testing.csv")
 
-# iterate through the gses
-train.gses <- unique(train_dat$gse)
-trainIn <- metaObject$originalData
-trainIn <- lapply(names(trainIn), function(gse) {
-  x <- trainIn[[gse]];
-  x$gene_mat <- x$expr;
-  colnames(x$gene_mat) <- 
-    sapply(colnames(x$gene_mat), 
-           function(gsm) sprintf("%s.%s", str_replace_all(gse, "\\.", "-"), gsm))
-  return(x)
-  })
-names(trainIn) <- names(metaObject$originalData)
-consensus.genes <- exprsex::getConsensusGenes(list(trainIn)) # double nest for this
-write_csv(data.frame(consensus.genes), "data/consensus_genes.csv")
+test.gses <- unique(test_dat$gse)
+NUM.CHUNKS <- ceiling(length(test.gses)/SIZE.CHUNK)
+end_idx <- ifelse((NUM.CHUNKS-1) == idx ,length(test.gses), (idx+1)*SIZE.CHUNK)
 
-train_expr <- lapply(trainIn, function(dat)
-                      exprsex::reorderRank(dat$gene_mat, gene_list=consensus.genes, to.rank=FALSE))
-train_rank <- lapply(trainIn, function(dat)
-  exprsex::reorderRank(dat$gene_mat, gene_list=consensus.genes))
+test.gses2 <- test.gses[(idx*SIZE.CHUNK):end_idx]
 
-train_expr2 <- data.frame(do.call(cbind, train_expr))
-train_rank2 <- data.frame(do.call(cbind, train_rank))
-
-train_lab <- lapply(names(trainIn), function(gse) {
-  x <- trainIn[[gse]];
-  lab <- x$class;
-  data.frame("gse"=rep(gse, length(lab)), "gsm"=names(lab), "sex"=lab)
-  })
-# output: gse, gsm, class label
-train_lab2 <- do.call(rbind, train_lab)
-
-write_csv(train_expr2, "data/03_silver_std/03_out_mat/train_expr.csv")
-write_csv(train_rank2, "data/03_silver_std/03_out_mat/train_rank.csv")
-write_csv(train_lab2, "data/03_silver_std/03_out_mat/train_lab.csv")
 
 
 ##### ----- CONSTRUCT THE TEST MATRICES ----- ####
-test_dat <- read_csv("data/01_sample_lists/human_testing.csv")
+
 MIN.ROWS <- 10000
-test.gses <- unique(test_dat$gse)
-test <- lapply(head(test.gses), 
+
+# divide into groups of 20
+test <- lapply(test.gses2, 
                 function(gse){
                   print(gse)
                   gse_dat <- test_dat[test_dat$gse==gse,]
@@ -82,22 +60,22 @@ test <- lapply(head(test.gses),
                 })
 
 test_f <-test[!is.na(test)]
-consensus_genes <- read_csv("data/consensus_genes.csv")
-consensus.genes <- sapply(consensus_genes$consensus.genes, as.character)
 
 
 test_expr <- lapply(test_f, function(dat)
   exprsex::reorderRank(dat, gene_list=consensus.genes, to.rank=FALSE))
 test_rank <- lapply(test_f, function(dat)
   exprsex::reorderRank(dat, gene_list=consensus.genes))
+save(test_expr, file=sprintf("data/03_silver_std/03_out_mat/test_expr_%s.RData", idx))
+save(test_rank, file=sprintf("data/03_silver_std/03_out_mat/test_rank_%s.RData", idx))
 test_expr2 <- data.frame(do.call(cbind, test_expr))
 test_rank2 <- data.frame(do.call(cbind, test_rank))
 
 
-write_csv(test_expr2, file="data/03_silver_std/03_out_mat/test_expr.csv")
-write_csv(test_expr2, file="data/03_silver_std/03_out_mat/test_rank.csv")
+write_csv(test_expr2, sprintf("data/03_silver_std/03_out_mat/test_expr_%s.csv", idx))
+write_csv(test_expr2, sprintf("data/03_silver_std/03_out_mat/test_rank_%s.csv", idx))
 
 filt_gses <- unique(sapply(colnames(text_expr2), function(x) strsplit(x, "\\.")[[1]][[1]]))
 # extract test_lab from test_dat but filter out removed gses
 test_lab <- test_dat %>% filter(gse %in% filt_gses) %>% mutate(sex=ifelse(sex=="male", 1, 0))
-write_csv(test_lab, file="data/03_silver_std/03_out_mat/test_lab.csv")
+write_csv(test_lab, sprintf("data/03_silver_std/03_out_mat/test_lab_%s.csv", idx))

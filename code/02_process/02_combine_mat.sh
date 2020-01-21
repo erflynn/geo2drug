@@ -8,5 +8,7 @@
 
 ml R/3.6.1
 
-
-Rscript code/02_process/02a_combine_sex_lab.R $SLURM_ARRAY_TASK_ID
+ORGANISM=$1
+OUT_DIR=data/03_silver_std/${ORGANISM}/02_keep_labels/
+mkdir -p $OUT_DIR
+Rscript code/02_process/02a_combine_sex_lab.R $ORGANISM $SLURM_ARRAY_TASK_ID

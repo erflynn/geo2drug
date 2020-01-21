@@ -8,4 +8,6 @@
 
 ml R/3.6.1
 
-Rscript code/02_process/04a_run_meta.R
+ORGANISM=$1
+mkdir -p data/03_silver_std/${ORGANISM}/03_out_mat
+Rscript code/02_process/04a_run_meta.R $ORGANISM
