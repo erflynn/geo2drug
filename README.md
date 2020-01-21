@@ -1,28 +1,62 @@
-
 ### geo2drug
 ### E Flynn
-### Last updated: 9/25/2019
-
-The code in this repository is used for mapping GEO datasets to drugs (using DrugBank IDs or other).
 
 
-#### GEO Metadata and download
-GEO metadata is downloaded using `get_list_all_gse.R`
-The GEO data itself is then downloaded server-side using the scripts in the `geo_download` directory.
+This repository annotates GEO datasets using DrugBank and Cellosaurus labels.
+Then, we download and sex label all data.
 
-#### Cell line labeling
-  * `parse_cellosaurus.py`
-  * `process_cell_df.R`
-  * `cell_line_labeling.R` 
-  
-#### Drug labeling
-  * `drugbank_synonyms.py`
-  * `process_drugbank.R`
-  * `drug_gse_labeling.R` 
 
-#### Data files:
- * `data/db_data/`: contains output of database downloads and parsing
- * `data/ref_data/`: contains reference data from other sources
+The code directory is set up as follows:
+
+#### `00_annot/`
+  1. GEO metadata is downloaded using `00_get_list_all_gse.R`
+   - output: (in `data/01_sample_lists/`)
+    * `<>_gse_gsm.csv`
+    * `gse_<>.csv`
+    * `gse_gsm_all_geo_dedup.csv`
+    * `gse_all_geo_info.csv`
+  2. `01_cell_labeling/`
+   * `00_parse_cellosaurus.py`
+     - input: cellosaurus XML, located in `data/00_db_data/cellosaurus.xml`
+     - output: `data/00_db_data/cellosaurus.json`
+   * `01_process_cell_df.R`
+     - output: `data/00_db_data/cellosaurus_df.txt`
+   * `02_cell_line_labeling.R` 
+     - uses `data/01_sample_lists/gse_all_geo_info.csv`
+     - output: `data/02_labeled_data/cell_line_mapped_gse.txt`
+  3. `02_drug_labeling/`
+   * `00_drugbank_synonyms.py`
+     - input: `drugbank.xml`
+     - output: `data/00_db_data/drugbank_info.json`
+   * `01_process_drugbank.R`
+     - output: `data/00_db_data/drugbank_parsed.txt`
+   * `02_drug_gse_labeling.R` 
+     - uses `data/01_sample_lists/gse_all_geo_info.csv`
+     - output: `data/02_labeled_data/drugbank_mapped_gse.txt` 
+
+#### `01_download/`
+  This uses the NCBI aspera client and relies on wrenlab software packages and is slightly complicated to install.
+  `sbatch 00_download_gse_wrapper.sh ${ID} ${GSE_LIST}`
+
+  This runs `download_geo_chunk.sh` which runs `downloadGEO.py` for each individual GSE.
+  We do this for ID=["mouse", "rat", and "human"], and use the files "data/sample_lists/gse_${ID}.csv". 
+
+// TODO: download GPL scripts
+
+#### `02_process/`
+  This directory processes downloaded GSEs using exprsex based on a reference list of files.
+  * `00_convert_to_mat.sh`
+  * `01_label_mat.sh`
+  * `02_combine_mat.sh`
+  * `03_train_test_divide.R`
+  * `04_run_meta.sh`
+  * `05_train_test_mat.sh`
  
 
 
+
+
+Required files:
+ - GEOMetadb (update GEOMetadb in utils path to this)
+ - drugbank and cellosaurus XML in the `00_db_data` directory
+ - jake_stopwords file
