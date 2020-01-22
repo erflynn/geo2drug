@@ -63,11 +63,11 @@ massiRAcc <- function(expData, ychr.genes, threshold=3, na.cut=0.3, min.samples=
 #' @param expData expression matrix with rows as genes and columns as samples
 #' @param f.genes ids for f-spec genes (XIST)
 #' @param m.genes ids for m-spec genes (KDM5D, RPS4Y1)
-#' @param min.samples the sample cutoff for returning results, default to 10
+#' @param min.samples the sample cutoff for returning results, default to 8
 #' 
 #' @return list of sex labels, NULL if sex labeling failed
 tokerSexLab <- function(expData, f.genes="7503", m.genes=c("6192", "8284"),
-                        min.samples=10){
+                        min.samples=8){
   
   keys <- rownames(expData)
   f.genes2 <- sapply(intersect(keys, f.genes), as.character)
@@ -78,11 +78,6 @@ tokerSexLab <- function(expData, f.genes="7503", m.genes=c("6192", "8284"),
     return(NULL)
   }
   
-  # // TODO change this eventually??
-  if (length(f.genes2)!= 1 & length(m.genes2) != 2){
-    print("Error. for now this is implemented only for 1 f gene (XIST) and 2 m (KDM5D, RPS4Y1).")
-    return(NULL)
-  }
   
   genes.df <- expData[c(f.genes2, m.genes2),]
   cols <- colnames(genes.df)
@@ -99,9 +94,19 @@ tokerSexLab <- function(expData, f.genes="7503", m.genes=c("6192", "8284"),
   
   clus <- kmeans(t(genes.df2), centers=2)
   sex_lab <- clus$cluster
-  m.clus <- unlist(which.max(rowMeans(clus$centers[,c(m.genes2)])))
-  # // TODO only works for single f gene
-  f.clus <- unlist(which.max(clus$centers[,c(f.genes2)])) 
+
+  # get clusters
+  if (length(m.genes2)==1){
+    m.clus <- unlist(which.max(clus$centers[,c(m.genes2)])) 
+  } else {
+    m.clus <- unlist(which.max(rowMeans(clus$centers[,c(m.genes2)])))
+  }
+  
+  if (length(f.genes2)==1){
+    f.clus <- unlist(which.max(clus$centers[,c(f.genes2)])) 
+  } else {
+    f.clus <- unlist(which.max(rowMeans(clus$centers[,c(f.genes2)])))
+  }
   
   if (f.clus==m.clus){
     print("Error, Toker method - the same cluster has higher f and m values so we cannot assign.")

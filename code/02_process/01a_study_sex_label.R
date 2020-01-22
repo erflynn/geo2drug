@@ -18,22 +18,22 @@ SIZE.CHUNK <- 50
 
 # parse arguments
 args <- commandArgs(trailingOnly=TRUE)
-gse.file <- args[1]
-gse.list <- read.csv(gse.file, header=TRUE)
-OUT.DIR <- args[2]
-organism <- args[3]
-idx <- as.numeric(args[4])
+
+OUT.DIR <- args[1]
+organism <- args[2]
+idx <- as.numeric(args[3])
 print(idx)
 logfile <- "tmp.log"
 out_dir <- OUT.DIR
 MAT.DIR <- sprintf("data/03_silver_std/%s/00_mat_files/", organism)
 
-NUM.CHUNKS <- ceiling(nrow(gse.list)/SIZE.CHUNK)
-end_idx <- ifelse((NUM.CHUNKS-1) == idx ,nrow(gse.list), (idx+1)*SIZE.CHUNK)
-gse.list <- gse.list[(idx*SIZE.CHUNK):end_idx,]
+gse.list <- sapply(list.files(MAT.DIR), function(x) strsplit(x, "_")[[1]][[1]])
 
-print(gse.list[,1])
+NUM.CHUNKS <- ceiling(length(gse.list)/SIZE.CHUNK)
+end_idx <- ifelse((NUM.CHUNKS-1) == idx ,length(gse.list), (idx+1)*SIZE.CHUNK)
+gse.list <- gse.list[(idx*SIZE.CHUNK):end_idx]
 
+print(gse.list)
 
 combined_data2 <- read.csv(sprintf("data/01_sample_lists/%s_ale_sex_lab.csv", organism))
 larger_annot2 <- combined_data2
@@ -90,7 +90,7 @@ studySexLabel <- function(geo.obj){
       ychr_keys <- keys[keys %in% y_genes$gene]
       if (organism == "human"){
       	 toker_keys <- keys[keys %in% toker_list2.2]
-	 toker_sex_labels <- tokerSexLab(expr2, f.genes=toker_list2f, m.genes=toker_list2m) # /// TODO this needs to be updated
+	        toker_sex_labels <- tokerSexLab(expr2, f.genes=toker_list2f, m.genes=toker_list2m) # /// TODO this needs to be updated
       } else {
       	toker_sex_labels <- c()
       }
@@ -139,7 +139,7 @@ studySexLabel <- function(geo.obj){
 
 
 
-lapply(gse.list[,1], function(gse.id){
+lapply(gse.list, function(gse.id){
 print(gse.id)
 gse.f <- sprintf("%s/%s_mat.RData", MAT.DIR, gse.id)
 if (file.exists(gse.f)){

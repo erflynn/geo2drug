@@ -47,7 +47,7 @@ gse_gpl2 <- gse_info %>%
 keep.dat <- c(train_lab$gse %in% gse_gpl2$gse)
 train_rank2 <- train_rank[,keep.dat]
 train_sex_lab2 <- train_sex_lab[keep.dat]
-
+save(train_rank2, train_sex_lab2, file="data/03_silver_std/human/03_out_mat/train_plat_filt.RData")
 fit2 <- exprsex::trainSexLab(as.matrix(train_rank2),
                             train_sex_lab2,
                             female_genes=fgenes_df2$id,
@@ -76,8 +76,7 @@ removeGenes <-function(nGenes, dat, test_labels) {
   return(data.frame("ngenes"=nGenes, "acc"=acc))
 }
 
-removeGenes(5, dat, test_labels)
-
+## // TODO -- do this with the testing data
 acc_remove <- do.call(rbind, lapply(1:50, function(i)
                      do.call(rbind, 
                       lapply(1:30, function(x) removeGenes(x, dat, test_labels)))))
@@ -92,6 +91,6 @@ ggplot(acc_remove, aes(y=acc, x=factor(ngenes)))+geom_boxplot()+ylab("accuracy (
 
 
 
-
+# // TODO: accuracy vs number of genes missing for the test data?
 
 

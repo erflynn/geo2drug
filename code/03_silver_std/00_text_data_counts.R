@@ -30,6 +30,11 @@ print(table(dat2$Gender)  )
 
 # write out the sex labels for use later
 dat3 <- dat2 %>% select(gse, gsm, gpl, Gender) %>% filter(Gender!="")
+length(unique(dat3$gse))
+ale_combined <- read_csv("data/deprecated/ale_combined_data.csv")
+ale2 <- ale_combined %>% filter(text_sex !="")
+ale_combined[ale_combined$gse=="GSE112371" & !is.na(ale_combined$gse),]
+
 dat3 %>% write_csv(sprintf("data/01_sample_lists/%s_ale_sex_lab.csv", organism))
 
 # summarize to get the by-study breakdown
