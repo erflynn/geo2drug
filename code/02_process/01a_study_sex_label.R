@@ -31,7 +31,7 @@ gse.list <- sapply(list.files(MAT.DIR), function(x) strsplit(x, "_")[[1]][[1]])
 
 NUM.CHUNKS <- ceiling(length(gse.list)/SIZE.CHUNK)
 end_idx <- ifelse((NUM.CHUNKS-1) == idx ,length(gse.list), (idx+1)*SIZE.CHUNK)
-gse.list <- gse.list[(idx*SIZE.CHUNK):end_idx]
+gse.list <- gse.list[(idx*SIZE.CHUNK+1):end_idx]
 
 print(gse.list)
 
@@ -62,15 +62,20 @@ NA.MAX <- 0.3
 
 
 
-studySexLabel <- function(geo.obj){
+studySexLabel <- function(geo.obj, gse.id){
 
   # // TODO - need to iterate thru
   res <- tryCatch({
     # for a GSE object, sex label and figure out if the sex labels match
-    gse.id <- names(geo.obj)
-    
-    res2 <- lapply(1:length(geo.obj), function(i){
-    	 gse.obj <- geo.obj[[i]]
+    # find the ones that actually match the GSE
+    to.keep <- stringr::str_detect(names(geo.obj), sprintf("%s[-|_]+", gse.id))
+    geo.obj2 <- geo.obj[to.keep]
+    if (length(geo.obj2)==2){
+      print(sprintf("missing data for %s", gse.id))
+      return(NA)
+    }
+    res2 <- lapply(1:length(geo.obj2), function(i){
+    	 gse.obj <- geo.obj2[[i]]
       pheno <- gse.obj$pheno
       
       # filter the gene matrix to remove genes with more than 30% NAs
@@ -90,7 +95,7 @@ studySexLabel <- function(geo.obj){
       ychr_keys <- keys[keys %in% y_genes$gene]
       if (organism == "human"){
       	 toker_keys <- keys[keys %in% toker_list2.2]
-	        toker_sex_labels <- tokerSexLab(expr2, f.genes=toker_list2f, m.genes=toker_list2m) # /// TODO this needs to be updated
+	       toker_sex_labels <- tokerSexLab(expr2, f.genes=toker_list2f, m.genes=toker_list2m) # /// TODO this needs to be updated
       } else {
       	toker_sex_labels <- c()
       }
@@ -142,9 +147,10 @@ studySexLabel <- function(geo.obj){
 lapply(gse.list, function(gse.id){
 print(gse.id)
 gse.f <- sprintf("%s/%s_mat.RData", MAT.DIR, gse.id)
+
 if (file.exists(gse.f)){
 		     miceadds::load.Rdata(gse.f, "geo.obj")
-		     res <- studySexLabel(geo.obj)
+		     res <- studySexLabel(geo.obj, gse.id)
 }
 		 
 })

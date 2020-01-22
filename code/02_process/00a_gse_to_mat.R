@@ -4,7 +4,7 @@
 
 require('exprsex')
 require('MetaIntegrator')
-
+require('R.utils')
 SIZE.CHUNK <- 50
 
 # parse arguments
@@ -24,28 +24,36 @@ print(idx)
 
 NUM.CHUNKS <- ceiling(nrow(gse.list)/SIZE.CHUNK)
 end_idx <- ifelse((NUM.CHUNKS-1) == idx ,nrow(gse.list), (idx+1)*SIZE.CHUNK)
-gse.list <- gse.list[(idx*SIZE.CHUNK):end_idx,]
+gse.list <- gse.list[(idx*SIZE.CHUNK+1):end_idx,]
 
 print(gse.list[,1])
 
-gses.to.run <- setdiff(gse.list[,1], c("GSE39144", "GSE76246", "GSE79945", "GSE76516", "GSE70564", "GSE25219","GSE37138", "GSE18927", "GSE30727", "GSE50421", "GSE40492", "GSE31983","GSE19090", "GSE26106","GSE70565", "GSE76519", "GSE84890" , "GSE77714", "GSE28387", "GSE46381", "GSE88920", "GSE59517", "GSE75083"))
+downloadData <- function(gse){
+  print(gse)
+  
+  out.file <- sprintf("%s/%s_mat.RData", OUT.DIR, gse)
+  if (!file.exists(out.file)){
+    geo.obj <- NULL
+    # try to download the file
+    try(geo.obj <- exprsex::getPrepGSE(gse, gpl.dir=GPL.DIR, gse.dir=GSE.DIR)) 
+    if (is.null(geo.obj)){
+      print(sprintf("Could not load %s", gse))
+    } else {
+      save(geo.obj, file=out.file)
+      print(sprintf("Succeeded with %s", gse))
+      
+    }
+  } else {
+    print(sprintf("Already loaded %s", gse))
+  }
+}
 
-lapply(gses.to.run, function(gse){
-
-tryCatch({
-	print(gse)
-	 
-
-	 out.file <- sprintf("%s/%s_mat.RData", OUT.DIR, gse)
-	 if (!file.exists(out.file)){
-	    geo.obj <- exprsex::getPrepGSE(gse, gpl.dir=GPL.DIR, gse.dir=GSE.DIR)
-	    save(geo.obj, file=out.file)
-   	 } else {
-	 print("already loaded")
-	 }
-
-}, err= function(e){
-   print(sprintf("%s error loading", gse))
-   print(e)
-})
+lapply(gse.list[,1], function(gse){
+  tryCatch({
+  res <- withTimeout({
+    downloadData(gse)
+    }, timeout=18000)
+  }, TimeoutException = function(ex) {
+    message(sprintf("Timeout. Skipping %s.", gse))
+  })
 })

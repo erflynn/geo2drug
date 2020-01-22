@@ -17,7 +17,7 @@ all_f <- list.files(path=sprintf("data/03_silver_std/%s/01_compare_labels/", org
 NUM.CHUNKS <- ceiling(length(all_f)/SIZE.CHUNK)
 end_idx <- ifelse((NUM.CHUNKS-1) == idx ,length(all_f), (idx+1)*SIZE.CHUNK)
 
-gse.list <- all_f[(idx*SIZE.CHUNK):end_idx]
+gse.list <- all_f[(idx*SIZE.CHUNK+1):end_idx]
 
 
 lapply(gse.list, function(f){
