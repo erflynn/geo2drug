@@ -8,17 +8,31 @@ require('tidyverse')
 
 args <- commandArgs(trailingOnly=TRUE)
 organism <- args[1]
+run_v <- args[2]
 
-
-miceadds::load.Rdata(sprintf("data/03_silver_std/%s/04_meta_res/metaObj.RData", organism), "metaObj")
+miceadds::load.Rdata(sprintf("data/03_silver_std/%s/04_meta_res/metaObj_%s.RData", organism, run_v), "metaObj") 
 
 num_studies <- length(metaObj$originalData)
 
-# we use slightly different filters for rat because there are so few studies
+if (run_v == "full"){ # remove loo b/c so big
+  metaCopy <- metaObj
+  loo <- metaCopy$leaveOneOutAnalysis
+  loo2 <- loo[sapply(loo, function(x) length(x))!=0]
+  metaCopy$leaveOneOutAnalysis <- loo2
+  metaObj <- metaCopy
+}
+
+## try a couple different sets of filters for each so we have all these data
+# diff filters for each to get a reasonable number of genes
 if (organism == "rat"){
+  metaObj <- filterGenes(metaObj, isLeaveOneOut=TRUE, 
+                         FDRThresh = 0.05, effectSizeThresh=0.5)
+}
+if (organism=="mouse"){
   metaObj <- filterGenes(metaObj, isLeaveOneOut=FALSE, 
-                         FDRThresh = 0.05, effectSizeThresh=0.5,
-                         numberStudiesThresh = 3)
+                         FDRThresh = 0.05, effectSizeThresh=0.4,
+                         numberStudiesThresh = 10)
+  
 } else {
   metaObj <- filterGenes(metaObj, isLeaveOneOut=FALSE, 
                          FDRThresh = 0.05, effectSizeThresh=0.5,
@@ -50,10 +64,10 @@ fgenes_df <- gene_map %>%
   unique() %>% 
   filter(chromosome_name %in% c(1:22, "X", "Y"))
 
-fgenes_df %>% write_csv(sprintf("data/03_silver_std/%s/04_meta_res/fgenes.csv", organism))
-mgenes_df %>% write_csv(sprintf("data/03_silver_std/%s/04_meta_res/mgenes.csv", organism))
+fgenes_df %>% write_csv(sprintf("data/03_silver_std/%s/04_meta_res/fgenes_%s.csv", organism, run_v))
+mgenes_df %>% write_csv(sprintf("data/03_silver_std/%s/04_meta_res/mgenes_%s.csv", organism, run_v))
 
 # write out the FDR info
 res_summary <- summarizeFilterResults(metaObj, getMostRecentFilter(metaObj))
-res_summary$pos %>% write_csv(sprintf("data/03_silver_std/%s/04_meta_res/mgenes_summary.csv", organism))
-res_summary$neg %>% write_csv(sprintf("data/03_silver_std/%s/04_meta_res/fgenes_summary.csv", organism))
+res_summary$pos %>% write_csv(sprintf("data/03_silver_std/%s/04_meta_res/mgenes_summary_%s.csv", organism, run_v))
+res_summary$neg %>% write_csv(sprintf("data/03_silver_std/%s/04_meta_res/fgenes_summary_%s.csv", organism, run_v))
