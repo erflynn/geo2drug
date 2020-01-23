@@ -72,8 +72,8 @@ if (organism=="human"){
     sample_n(8)
   train_common <- (rand_sel %>% sample_n(n=4))$gse
   test_common <- setdiff(rand_sel$gse, train_common)
-  writeOutput(train_common, "training_common")
-  writeOutput(test_common, "testing_common")
+  writeOutput(train_common, "training")
+  writeOutput(test_common, "testing")
   
   # add in the rest of the GPLs with >=4, 2-3 train, 2-4 test
   n2_gpls <- mult_gpls %>% filter(n < 8 & gpl %in% full_gpl)
@@ -95,13 +95,13 @@ if (organism=="human"){
     filter(gpl %in% mult_gpls$gpl & 
              !(gse %in% c(train_full, test_full, train_common, test_common)))
   extended_test <- extended_test_dat$gse
-  writeOutput(extended_test, "test_extended")
+  writeOutput(extended_test, "testing_extended")
   
   # platforms with less than 4 studies
   rare_gpls <- silver_std_rem %>%
     filter(gpl %in% (gpl_counts %>% filter(n <4))$gpl)
   extended_few_samples <- rare_gpls$gse
-  writeOutput(extended_few_samples, "test_rare")
+  writeOutput(extended_few_samples, "testing_rare")
 }
 
 #### ---- code for rat ---- ####
@@ -134,7 +134,7 @@ if (organism=="mouse"){
   # write all the ones that have 1 to test_rare
   ext_test <- silver_std_rem %>% 
     filter(gpl %in% (filter(gpl_counts, n==1))$gpl)
-  writeOutput(ext_test$gse, "test_rare")
+  writeOutput(ext_test$gse, "testing_rare")
   
 }
 

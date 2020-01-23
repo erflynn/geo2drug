@@ -7,19 +7,25 @@ SIZE.CHUNK <- 20
 args <- commandArgs(trailingOnly=TRUE)
 organism <- args[1]
 idx <- as.numeric(args[2])
+run_v <- args[3]
 
+if (run_v == "common"){
+  consensus_genes <- read.csv(sprintf("data/consensus_genes_%s.csv", organism))
+  test_dat <- read_csv(sprintf("data/01_sample_lists/%s_testing.csv", organism))
+  
+} else {
+  consensus_genes <- read.csv(sprintf("data/consensus_genes_%s_full.csv", organism))
+  test_dat <- read_csv(sprintf("data/01_sample_lists/%s_testing_%s.csv", organism, run_v))
+}
 
-consensus_genes <- read.csv(sprintf("data/consensus_genes_%s.csv", organism))
 consensus.genes <- sapply(consensus_genes$consensus.genes, as.character)
 
-
-test_dat <- read_csv(sprintf("data/01_sample_lists/%s_testing.csv", organism))
 
 test.gses <- unique(test_dat$gse)
 NUM.CHUNKS <- ceiling(length(test.gses)/SIZE.CHUNK)
 end_idx <- ifelse((NUM.CHUNKS-1) == idx ,length(test.gses), (idx+1)*SIZE.CHUNK)
 
-test.gses2 <- test.gses[(idx*SIZE.CHUNK):end_idx]
+test.gses2 <- test.gses[(idx*SIZE.CHUNK+1):end_idx]
 
 
 
@@ -68,16 +74,16 @@ test_expr <- lapply(test_f, function(dat)
   exprsex::reorderRank(dat, gene_list=consensus.genes, to.rank=FALSE))
 test_rank <- lapply(test_f, function(dat)
   exprsex::reorderRank(dat, gene_list=consensus.genes))
-save(test_expr, file=sprintf("data/03_silver_std/%s/03_out_mat/test_expr_%s.RData", organism, idx))
-save(test_rank, file=sprintf("data/03_silver_std/%s/03_out_mat/test_rank_%s.RData", organism, idx))
+save(test_expr, file=sprintf("data/03_silver_std/%s/03_out_mat/test_%s_expr_%s.RData", organism, run_v, idx))
+save(test_rank, file=sprintf("data/03_silver_std/%s/03_out_mat/test_%s_rank_%s.RData", organism, run_v, idx))
 test_expr2 <- data.frame(do.call(cbind, test_expr))
 test_rank2 <- data.frame(do.call(cbind, test_rank))
 
 
-write_csv(test_expr2, sprintf("data/03_silver_std/%s/03_out_mat/test_expr_%s.csv", organism, idx))
-write_csv(test_rank2, sprintf("data/03_silver_std/%s/03_out_mat/test_rank_%s.csv", organism, idx))
+write_csv(test_expr2, sprintf("data/03_silver_std/%s/03_out_mat/test_%s_expr_%s.csv", organism, run_v, idx))
+write_csv(test_rank2, sprintf("data/03_silver_std/%s/03_out_mat/test_%s_rank_%s.csv", organism, run_v, idx))
 
 filt_gses <- unique(sapply(colnames(test_expr2), function(x) strsplit(x, "\\.")[[1]][[1]]))
 # extract test_lab from test_dat but filter out removed gses
 test_lab <- test_dat %>% filter(gse %in% filt_gses) %>% mutate(sex=ifelse(text_sex=="male", 1, 0))
-write_csv(test_lab, sprintf("data/03_silver_std/%s/03_out_mat/test_lab_%s.csv", organism, idx))
+write_csv(test_lab, sprintf("data/03_silver_std/%s/03_out_mat/test_%s_lab_%s.csv", organism, run_v, idx))
