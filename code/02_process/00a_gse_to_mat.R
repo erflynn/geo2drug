@@ -10,7 +10,7 @@ SIZE.CHUNK <- 50
 # parse arguments
 args <- commandArgs(trailingOnly=TRUE)
 gse.file <- args[1]
-gse.list <- read.csv(gse.file, header=TRUE)
+gse.list <- read.csv(gse.file, header=TRUE, stringsAsFactors=FALSE)
 OUT.DIR <- args[2]
 
 organism <- args[3]
@@ -48,7 +48,8 @@ downloadData <- function(gse){
   }
 }
 
-lapply(gse.list[,1], function(gse){
+gses.to.run <- setdiff(gse.list[,1], c("GSE25219", "GSE18927", "GSE28387", "GSE30727", "GSE37138", "GSE50421", "GSE77714", "GSE19090"))
+lapply(gses.to.run, function(gse){
   tryCatch({
   res <- withTimeout({
     downloadData(gse)
