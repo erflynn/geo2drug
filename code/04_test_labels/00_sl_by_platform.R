@@ -67,6 +67,7 @@ fit <- exprsex::trainSexLab(as.matrix(train_rank),
                      train_sex_lab,
                      female_genes=fgenes_df2$id,
                      male_genes=mgenes_df2$id)
+save(fit, file="data/fit_0120.RData")
 pred_train <- predSexLab(fit, as.matrix(train_rank))
 pred_test0 <- predSexLab(fit, as.matrix(list.test[[0]]$rank))
 
@@ -179,7 +180,6 @@ test_plat_acc <- function(my.gpl){
   num_samples <- length(test_gpl$lab)
   num_studies <- length(unique(sapply(names(test_gpl$lab), function(x) strsplit(x, "\\.")[[1]][[1]])))
   
-  pred_test_df <- predSexLab(fit, as.matrix(test_gpl$rank), scores=TRUE)
   pred_test <- data.frame(t(pred_test_df))
   pred_test$true_sex <- test_gpl$lab
   ggplot(pred_test, aes(x=score_f, y=score_m))+
@@ -196,6 +196,8 @@ test_plat_acc <- function(my.gpl){
 
 test_acc <- lapply(test.gpls, test_plat_acc)
 test_acc_df <- do.call(rbind, test_acc)
+
+#### TODO - save the results
 
 train_acc %>% filter(gpl %in% test.gpls) %>% summarize(ntot=sum(num_studies), nsamp=sum(num_samples))
 # 13 studies, 808 samples, 8 platforms
