@@ -24,8 +24,8 @@ lapply(gse.list, function(f){
   load(sprintf("data/03_silver_std/%s/01_compare_labels/%s",organism,f)) # --> pheno2
   gse.id <-strsplit(f, "_")[[1]][[1]]
   pheno_tab <- pheno2[,c("gsm", "toker_sex", "massir_sex", "text_sex")]
-  if (organism == "human"){
-    matched_lab <- pheno_tab %>% dplyr::filter(toker_sex==massir_sex & massir_sex==text_sex)
+  if (organism == "human" & !all(is.na(pheno_tab$toker_sex))){
+    matched_lab <- pheno_tab %>% dplyr::filter(toker_sex==massir_sex & massir_sex==text_sex)	
   } else {
     print(table(pheno_tab[,c("massir_sex", "text_sex")]))
     matched_lab <- pheno_tab %>% dplyr::filter(massir_sex==text_sex)

@@ -5,7 +5,14 @@ MIN.ROWS <- 10000
 MIN.CASES <- 10
 args <- commandArgs(trailingOnly=TRUE)
 organism <- args[1]
-all_dat <- read_csv(sprintf("data/01_sample_lists/%s_training.csv", organism))
+run_v <- args[2]
+
+all_dat <- read_csv(sprintf("data/01_sample_lists/%s_training_common.csv", organism))
+if (run_v=="full"){
+   all_dat2 <- read_csv(sprintf("data/01_sample_lists/%s_training_full.csv", organism))
+   all_dat <- rbind(all_dat, all_dat2)
+} 
+print(nrow(all_dat))
 
 # iterate through the gses
 list.gses <- unique(all_dat$gse)
@@ -44,8 +51,8 @@ names(list.train.obj) <- list.gses
 # now run meta-integrator on this!
 metaObject <- list("originalData"=list.train.obj[!is.na(list.train.obj)])
 
-save(metaObject, file=sprintf("data/03_silver_std/%s/04_meta_res/input_metaObj.RData", organism))
+save(metaObject, file=sprintf("data/03_silver_std/%s/04_meta_res/input_metaObj_%s.RData", organism, run_v))
 metaObject <- runMetaAnalysis(metaObject)
-save(metaObject, file=sprintf("data/03_silver_std/%s/04_meta_res/metaObj.RData", organism)  )
+save(metaObject, file=sprintf("data/03_silver_std/%s/04_meta_res/metaObj_%s.RData", organism, run_v)  )
 
 
