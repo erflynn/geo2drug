@@ -20,12 +20,13 @@ SIZE.CHUNK <- 50
 args <- commandArgs(trailingOnly=TRUE)
 
 OUT.DIR <- args[1]
-organism <- args[2]
-idx <- as.numeric(args[3])
+MAT.DIR <- args[2]
+organism <- args[3]
+idx <- as.numeric(args[4])
 print(idx)
 logfile <- "tmp.log"
 out_dir <- OUT.DIR
-MAT.DIR <- sprintf("data/03_silver_std/%s/00_mat_files/", organism)
+
 
 gse.list <- sapply(list.files(MAT.DIR), function(x) strsplit(x, "_")[[1]][[1]])
 

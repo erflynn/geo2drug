@@ -9,6 +9,8 @@
 ml R/3.6.1
 
 ORGANISM=$1
-OUT_DIR=data/03_silver_std/${ORGANISM}/01_compare_labels/
+DS_DIR=$2
+OUT_DIR=data/${DS_DIR}/${ORGANISM}/01_compare_labels/
+MAT_DIR=data/${DS_DIR}/${ORGANISM}/00_mat_files/
 mkdir -p $OUT_DIR
-Rscript code/02_process/01a_study_sex_label.R $OUT_DIR $ORGANISM $SLURM_ARRAY_TASK_ID
+Rscript code/02_process/01a_study_sex_label.R $OUT_DIR $MAT_DIR $ORGANISM $SLURM_ARRAY_TASK_ID

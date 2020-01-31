@@ -7,7 +7,7 @@ args <- commandArgs(trailingOnly=TRUE)
 organism <- args[1]
 run_v <- args[2]
 
-all_dat <- read_csv(sprintf("data/01_sample_lists/%s_training_common.csv", organism))
+all_dat <- read_csv(sprintf("data/01_sample_lists/%s_training.csv", organism))
 if (run_v=="full"){
    all_dat2 <- read_csv(sprintf("data/01_sample_lists/%s_training_full.csv", organism))
    all_dat <- rbind(all_dat, all_dat2)

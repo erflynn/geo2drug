@@ -3,13 +3,13 @@
 require('MetaIntegrator')
 require('tidyverse')
 
-SIZE.CHUNK <- 20
+SIZE.CHUNK <- 30
 args <- commandArgs(trailingOnly=TRUE)
 organism <- args[1]
 idx <- as.numeric(args[2])
 run_v <- args[3]
 
-if (run_v == "common"){
+if (run_v == "common" | organism != "human"){
   consensus_genes <- read.csv(sprintf("data/consensus_genes_%s.csv", organism))
   test_dat <- read_csv(sprintf("data/01_sample_lists/%s_testing.csv", organism))
   
