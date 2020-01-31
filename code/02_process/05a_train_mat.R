@@ -26,11 +26,15 @@ trainIn <- lapply(names(trainIn), function(gse) {
   return(x)
   })
 names(trainIn) <- names(metaObj$originalData)
-consensus.genes <- exprsex::getConsensusGenes(list(trainIn)) # double nest for this
-if (run_v == "full"){
-  write_csv(data.frame(consensus.genes), sprintf("data/consensus_genes_%s_%s.csv", organism, run_v))
-} else {
+# I want to use the same set of consensus genes for EVERYTHING
+# this means I will define the consensus genes based on the "full" list and just leave it as such 
+# for human data, for the others -- I'll just use whatever they get
+if (run_v == "full" | organism != "human"){
+  consensus.genes <- exprsex::getConsensusGenes(list(trainIn)) # double nest for this
   write_csv(data.frame(consensus.genes), sprintf("data/consensus_genes_%s.csv", organism))
+} else {
+  consensus_genes <- read_csv(sprintf("data/consensus_genes_%s.csv", organism))
+  consensus.genes <- sapply(consensus_genes$consensus.genes, as.character)
 }
 
 train_expr <- lapply(trainIn, function(dat)

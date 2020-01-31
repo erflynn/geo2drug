@@ -9,16 +9,14 @@ organism <- args[1]
 idx <- as.numeric(args[2])
 run_v <- args[3]
 
-if (run_v == "common" | organism != "human"){
-  consensus_genes <- read.csv(sprintf("data/consensus_genes_%s.csv", organism))
+consensus_genes <- read.csv(sprintf("data/consensus_genes_%s.csv", organism))
+consensus.genes <- sapply(consensus_genes$consensus.genes, as.character)
+
+if (run_v == "common"){
   test_dat <- read_csv(sprintf("data/01_sample_lists/%s_testing.csv", organism))
-  
 } else {
-  consensus_genes <- read.csv(sprintf("data/consensus_genes_%s_full.csv", organism))
   test_dat <- read_csv(sprintf("data/01_sample_lists/%s_testing_%s.csv", organism, run_v))
 }
-
-consensus.genes <- sapply(consensus_genes$consensus.genes, as.character)
 
 
 test.gses <- unique(test_dat$gse)

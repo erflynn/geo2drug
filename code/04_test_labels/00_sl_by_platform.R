@@ -42,13 +42,9 @@ calcAcc(train_lab, pred_train) # 93.9% training accuracy for common
 
 
 # --- grab gpl info --- #
-silver_std <- read.csv(sprintf("data/01_sample_lists/gse_for_silver_std_%s.csv", organism), stringsAsFactors = FALSE)
-silver_std_s <- silver_std %>% filter(!str_detect(gpl, "\\|")) 
-silver_std_m <- silver_std %>% filter(str_detect(gpl, "\\|"))  %>% separate_rows(gpl, sep="\\|") %>%
-  mutate(gse=sprintf("%s-%s", gse, gpl)) 
-silver_std2 <- data.frame(rbind(silver_std_s, silver_std_m))
-silver_std2 %>% write_csv(sprintf("data/01_sample_lists/silver_std_%s_reform.csv", organism))
 
+silver_std2 <- sepReformatGPL(silver_std)
+silver_std2 %>% write_csv(sprintf("data/01_sample_lists/silver_std_%s_reform.csv", organism))
 train_pred_df <- pred_out_df(fit, train_rank, train_lab, organism)
 summarizeAcc(train_pred_df, "train", organism)
 
