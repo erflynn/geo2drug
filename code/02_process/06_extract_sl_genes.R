@@ -8,8 +8,13 @@ require('tidyverse')
 
 args <- commandArgs(trailingOnly=TRUE)
 organism <- args[1]
-run_v <- args[2]
+#run_v <- args[2]
 
+if (organism=="human"){
+  run_v <- "full"
+} else {
+  run_v <- "common"
+}
 miceadds::load.Rdata(sprintf("data/03_silver_std/%s/04_meta_res/metaObj_%s.RData", organism, run_v), "metaObj") 
 
 num_studies <- length(metaObj$originalData)
@@ -52,6 +57,8 @@ if (organism != "human"){
 } else {
   sel.list <- c("hgnc_symbol", "entrezgene_id", "chromosome_name")
 }
+
+# NOTE: mouse/rat have fewer than 46 chromosome but this works fine for what we need
 mgenes_df <- gene_map %>% 
   filter(entrezgene_id %in% m_genes) %>% 
   select(sel.list) %>% 
@@ -64,10 +71,10 @@ fgenes_df <- gene_map %>%
   unique() %>% 
   filter(chromosome_name %in% c(1:22, "X", "Y"))
 
-fgenes_df %>% write_csv(sprintf("data/03_silver_std/%s/04_meta_res/fgenes_%s.csv", organism, run_v))
-mgenes_df %>% write_csv(sprintf("data/03_silver_std/%s/04_meta_res/mgenes_%s.csv", organism, run_v))
+fgenes_df %>% write_csv(sprintf("data/03_silver_std/%s/04_meta_res/fgenes.csv", organism))
+mgenes_df %>% write_csv(sprintf("data/03_silver_std/%s/04_meta_res/mgenes.csv", organism))
 
 # write out the FDR info
 res_summary <- summarizeFilterResults(metaObj, getMostRecentFilter(metaObj))
-res_summary$pos %>% write_csv(sprintf("data/03_silver_std/%s/04_meta_res/mgenes_summary_%s.csv", organism, run_v))
-res_summary$neg %>% write_csv(sprintf("data/03_silver_std/%s/04_meta_res/fgenes_summary_%s.csv", organism, run_v))
+res_summary$pos %>% write_csv(sprintf("data/03_silver_std/%s/04_meta_res/mgenes_summary.csv", organism))
+res_summary$neg %>% write_csv(sprintf("data/03_silver_std/%s/04_meta_res/fgenes_summary.csv", organism))
