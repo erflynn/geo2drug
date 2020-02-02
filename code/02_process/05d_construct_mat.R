@@ -25,14 +25,22 @@ extractChunk <- function(my.list, idx, SIZE.CHUNK=50){
 
 # function to construct the matirx
 loadGSEData <- function(gse, dat_info, my.dir, MIN.ROWS=10000){
-  gse_dat <- dat_info[dat_info$gse==gse,]
+  gse_dat <- data.frame(dat_info[dat_info$gse==gse,])
   gse2 <- strsplit(gse, "-")[[1]][[1]]
-  miceadds::load.Rdata(sprintf("%s/00_mat_files/%s_mat.RData", my.dir, gse2), "mat_obj")
+  my.f <- sprintf("%s/00_mat_files/%s_mat.RData", my.dir, gse2)
+  if (!file.exists(my.f)){
+     return(NA)
+  }
+  miceadds::load.Rdata(my.f, "mat_obj")
   mat_obj2 <- mat_obj[[sprintf("%s_series_matrix.txt.gz", gse)]]
-  gene_df <- apply(mat_obj2$gene_mat[,gse_dat$gsm], c(1,2), as.numeric)
-  pheno_df <- mat_obj2$pheno[gse_dat$gsm,]
-  class <- ifelse(gse_dat$text_sex=="female", 0, 1)
-  names(class) <- gse_dat$gsm
+  gsm.list <- intersect(colnames(mat_obj2$gene_mat), gse_dat$gsm)
+  gene_df <- apply(mat_obj2$gene_mat[,gsm.list], c(1,2), as.numeric)
+  pheno_df <- mat_obj2$pheno[gsm.list,]
+
+  rownames(gse_dat) <- gse_dat$gsm
+  gse_dat2 <- gse_dat[gsm.list,]
+  class <- ifelse(gse_dat2$text_sex=="female", 0, 1)
+  names(class) <- gsm.list
   keys <- rownames(gene_df)
   names(keys) <- keys
   if (nrow(gene_df) < MIN.ROWS){
@@ -57,8 +65,10 @@ loadGSEData <- function(gse, dat_info, my.dir, MIN.ROWS=10000){
 
 
 dat_info <- read_csv(dat.file)
-list.gses <- dat_info$gse
-chunk.gses <- extractChunk(list.gses)
+list.gses <- unique(dat_info$gse)
+print(length(list.gses))
+chunk.gses <- extractChunk(list.gses, idx)
+
 
 # load all the data
 loaded.gses <- lapply(chunk.gses,  function(gse) 
@@ -68,7 +78,11 @@ loaded.gses <- lapply(chunk.gses,  function(gse)
 gses_f <- loaded.gses[!is.na(loaded.gses)]
 gses_expr <- lapply(gses_f, function(dat)
   exprsex::reorderRank(dat, gene_list=consensus.genes, to.rank=FALSE))
-write_csv(gses_expr, sprintf("%s/03_out_mat/dat_%s_expr_%s.csv", my.dir, run_v, idx))
+
+gses_expr2 <- data.frame(do.call(cbind, gses_expr))
+
+
+write.csv(gses_expr2, file=sprintf("%s/03_out_mat/dat_%s_expr_%s.csv", my.dir, run_v, idx))
 
 # extract and write out labels
 dat_lab <- dat_info %>% filter(gse %in% chunk.gses) %>% mutate(sex=ifelse(text_sex=="male", 1, 0))
