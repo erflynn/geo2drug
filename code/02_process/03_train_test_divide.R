@@ -99,7 +99,7 @@ if (organism=="human"){
   
   # platforms with less than 4 studies
   rare_gpls <- silver_std_rem %>%
-    filter(gpl %in% (gpl_counts %>% filter(n <4))$gpl)
+    filter(gpl %in% (gpl_counts %>% filter(n < 4))$gpl)
   extended_few_samples <- rare_gpls$gse
   writeOutput(extended_few_samples, "testing_rare")
 }

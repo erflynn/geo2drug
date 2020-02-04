@@ -32,3 +32,15 @@ rbind(f_only2, m_only2) %>%
   select(gse, gpl, study_type) %>% 
   write_csv("data/01_sample_lists/human_single_sex_studies.csv")
 
+# now write these out at a sample level for processing 
+list.gses <- c(f_only2$gse, m_only2$gse)
+ale <- read_csv(sprintf("data/01_sample_lists/human_ale_sex_lab.csv"))
+ale2 <- ale %>% 
+  rename(text_sex="Gender") %>%
+  mutate(text_sex=ifelse(text_sex=="M", "male", "female"))
+
+sp_ale <- ale2 %>% filter(gse %in% list.gses)
+mp_ale <- ale2 %>% mutate(gse=paste(gse, gpl, sep="-")) %>% filter(gse %in% list.gses)
+
+samp_lab <-rbind(sp_ale, mp_ale) %>% select(gse, gsm, text_sex, gpl)
+samp_lab %>% write_csv("data/01_sample_lists/human_single_sex_samples.csv")
