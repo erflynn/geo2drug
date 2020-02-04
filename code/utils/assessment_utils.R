@@ -45,9 +45,9 @@ read_process_ds <- function(organism, sub.dir, prefix){
 #   return(list("rank"=test_rank[,names(test_lab)], "lab"=test_lab))
 # }
 
-read_clean_sl_genes <- function(organism, run_v){
-  fgenes_df <- read.csv(sprintf("data/03_silver_std/%s/04_meta_res/fgenes_%s.csv", organism, run_v))
-  mgenes_df <- read.csv(sprintf("data/03_silver_std/%s/04_meta_res/mgenes_%s.csv", organism, run_v))
+read_clean_sl_genes <- function(organism){
+  fgenes_df <- read.csv(sprintf("data/03_silver_std/%s/04_meta_res/fgenes.csv", organism))
+  mgenes_df <- read.csv(sprintf("data/03_silver_std/%s/04_meta_res/mgenes.csv", organism))
   fgenes_df2 <- fgenes_df %>% 
     mutate(id=as.character(entrezgene_id)) %>% 
     select(id) %>%
@@ -80,14 +80,13 @@ sepReformatGPL <- function(df) {
 }
 
 
-pred_out_df <- function(fit, df, lab, organism){
+pred_out_df <- function(fit, df, lab, organism, ref){
   pred_df <- predSexLab(fit, df, scores=TRUE)
   pred_df <- pred_df %>% rename(pred_sex=sex) 
   pred_df$true_sex <- lab
   pred_df$gsm <- sapply(rownames(pred_df ), function(x) {l <- strsplit(x, "\\.")[[1]]; l[[length(l)]]})
   pred_df$gse <- getGSEsDotted(rownames(pred_df))
   
-  ref <- read_csv(sprintf("data/01_sample_lists/silver_std_%s_reform.csv", organism))
   pred_gpl <- left_join(pred_df, ref %>% select(gse, gpl) %>% unique())
   return(pred_gpl)
 }
@@ -98,6 +97,15 @@ sampWrapper <- function(df, NUM_SEL=4){
   df_down <- df %>% filter(! (gpl %in% gpl_sm$gpl)) %>% group_by(gpl) %>% sample_n(NUM_SEL) %>% ungroup()
   df_sm <- df %>% filter(gpl %in% gpl_sm$gpl)
   return(data.frame(rbind(df_down, df_sm)))
+}
+
+acc_by_study <- function(pred_df){
+  pred_df %>% 
+    group_by(gpl, gse) %>%
+    summarize(true_pred=sum(true_sex==pred_sex, na.rm=TRUE), 
+              num_samples=length(true_sex)) %>%
+    mutate(acc=true_pred/num_samples) %>%
+    ungroup()
 }
 
 

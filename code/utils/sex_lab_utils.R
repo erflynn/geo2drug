@@ -12,6 +12,10 @@ massiRAcc <- function(expData, ychr.genes, threshold=3, na.cut=0.3, min.samples=
   # note - this reorders the results!, have fixed this
   
   require('massiR')
+  if (ncol(expData)==1 | is.null(colnames(expData))){
+    print("Error, massir method - there are not enough samples without missing data")
+    return(NULL)
+  }
   cols <- colnames(expData)
   expData <- expData[,order(cols)]
   
@@ -20,11 +24,11 @@ massiRAcc <- function(expData, ychr.genes, threshold=3, na.cut=0.3, min.samples=
   
   # remove columns with missing data
   na.count <- apply(expData[ychr.genes2,], 2, function(x) sum(is.na(x)))
-  genes.df <- expData[,na.count < na.cut*length(ychr.genes2),]
+  genes.df <- expData[,na.count < na.cut*length(ychr.genes2)]
   
   # fails if there are few columns left
   if (ncol(genes.df) < min.samples){
-    print("Error, there are not enough samples without missing data")
+    print("Error, massir method - there are not enough samples without missing data")
     return(NULL)
   }
   

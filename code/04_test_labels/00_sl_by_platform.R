@@ -8,25 +8,32 @@ options(stringsAsFactors = FALSE)
 
 args <- commandArgs(trailingOnly=TRUE)
 organism <- args[1]
-run_v <- args[2]
+
+# ---- load the data ---- #
+ss <- read_process_ds(organism, "06_single_sex", "single_sex")
+train <- read_process_ds(organism, "03_silver_std", "train_common")
+train_full <- read_process_ds(organism, "03_silver_std", "train_full")
+test <- read_process_ds(organism, "03_silver_std", "testing")
+test_full <- read_process_ds(organism, "03_silver_std", "testing_full")
+
+
+# ---- pre-process ---- #
+train_rank <- exprsex:::.expDataToRanks(train[[1]]$expr)
+train_lab <- train[[1]]$lab
+
+test1_rank <- exprsex:::.expDataToRanks(test[[1]]$expr)
+test1_lab <- test[[1]]$lab
+test2_rank <- exprsex:::.expDataToRanks(test[[2]]$expr)
+test2_lab <- test[[2]]$lab
+
+ss1_rank <- exprsex:::.expDataToRanks(ss[[1]]$expr)
+ss1_lab <- ss[[1]]$lab
+ss2_rank <- exprsex:::.expDataToRanks(ss[[2]]$expr)
+ss2_lab <- ss[[2]]$lab
 
 
 
-# ---- prepare data --- #
-common.genes <- read.csv(sprintf("data/consensus_genes_%s.csv", organism))$consensus.genes
-if (organism=="human"){
-  full.genes <- read.csv(sprintf("data/consensus_genes_%s_full.csv", organism))$consensus.genes
-  genes <- full.genes
-} else {
-  genes <- common.genes
-}
-
-
-train_rank <- read_process_mat(sprintf("data/03_silver_std/%s/03_out_mat/train_%s_rank.csv", organism, run_v), genes)
-train_expr <- read_process_mat(sprintf("data/03_silver_std/%s/03_out_mat/train_%s_expr.csv", organism, run_v), genes)
-train_lab <- read_process_lab(sprintf("data/03_silver_std/%s/03_out_mat/train_%s_lab.csv", organism, run_v))
-
-sl_genes <- read_clean_sl_genes(organism, run_v)
+sl_genes <- read_clean_sl_genes(organism)
 
 
 # ---- train and save a model ---- #
@@ -34,61 +41,113 @@ fit <- exprsex::trainSexLab(train_rank,
                             train_lab,
                             female_genes=sl_genes$f,
                             male_genes=sl_genes$m)
-save(fit, file=sprintf("data/04_fits/fit_%s_%s.RData", organism, run_v))
+suffix <- "0304"
+save(fit, file=sprintf("data/04_fits/fit_%s_%s.RData", organism, suffix))
 pred_train <- predSexLab(fit, train_rank)
+pred_test <- predSexLab(fit, test1_rank)
+pred_test2 <- predSexLab(fit, test2_rank)
+
+pred_ss <- predSexLab(fit, ss1_rank)
+pred_ss2 <- predSexLab(fit, ss2_rank)
 
 confMat(train_lab, pred_train)
-calcAcc(train_lab, pred_train) # 93.9% training accuracy for common
+calcAcc(train_lab, pred_train) # 94.7% training accuracy 
 
+confMat(pred_test, test1_lab)
+calcAcc(pred_test, test1_lab ) # 94.8% test accuracy 
+
+confMat(pred_test2, test2_lab)
+calcAcc(pred_test2, test2_lab ) # 74.5% test accuracy -- lower 
+
+confMat(c(pred_test, pred_test2), c(test1_lab, test2_lab))
+calcAcc(c(pred_test, pred_test2), c(test1_lab, test2_lab)) # 88.6%
+
+
+confMat(pred_ss, ss1_lab)
+calcAcc(pred_ss, ss1_lab ) # 80.8% accuracy 
+confMat(pred_ss2, ss2_lab)
+calcAcc(pred_ss2, ss2_lab ) # 94.1% accuracy
+
+confMat(c(pred_ss, pred_ss2), c(ss1_lab, ss2_lab))
+calcAcc(c(pred_ss, pred_ss2), c(ss1_lab, ss2_lab)) # 86.0% overall
+# <--- I think we have a lot of platform artifacts going on :(
+
+# ok so I'm not sure *IF* the single-sex studies have lower accuracy 
+#  -OR- if this is a platform-specific artifact
+# --> need to plot platform accuracy broken down by category
+# first step:
+#  - calculate by study accuracy
 
 # --- grab gpl info --- #
+ss_ref <- read_csv("data/01_sample_lists/human_single_sex_studies.csv")
+ss_ref2 <- ss_ref %>% sepReformatGPL()
+silver_std <- read_csv(sprintf("data/01_sample_lists/silver_std_%s_reform.csv", organism))
+train_pred_df <- pred_out_df(fit, train_rank, train_lab, organism, silver_std)
+train_stud <- acc_by_study(train_pred_df)
 
-silver_std2 <- sepReformatGPL(silver_std)
-silver_std2 %>% write_csv(sprintf("data/01_sample_lists/silver_std_%s_reform.csv", organism))
-train_pred_df <- pred_out_df(fit, train_rank, train_lab, organism)
-summarizeAcc(train_pred_df, "train", organism)
+ss_pred_df <- pred_out_df(fit, cbind(ss1_rank, ss2_rank), 
+                          c(ss1_lab, ss2_lab), organism, ss_ref2)
+ss_stud <- acc_by_study(ss_pred_df)
+
+test_pred_df <- pred_out_df(fit, cbind(test1_rank, test2_rank), 
+                          c(test1_lab, test2_lab), organism, silver_std)
+test_stud <- acc_by_study(test_pred_df)
+
+# --- plot the accuracy --- #
+test_stud$dataset <- "test"
+train_stud$dataset <- "train"
+ss_stud <- ss_stud %>% filter(gpl %in% c(unique(train_stud$gpl)))
+ss_stud$dataset <- "single_sex"
+ds_stud_acc <- test_stud %>% bind_rows(train_stud) %>% bind_rows(ss_stud)
+ds_stud_acc$dataset <- factor(ds_stud_acc$dataset, levels=c("train", "test", "single_sex"))
+train_gpl_acc_order <- train_stud %>% group_by(gpl) %>% summarize(acc=mean(acc)) %>% arrange(desc(acc))
+ds_stud_acc$gpl <- factor(ds_stud_acc$gpl, levels=train_gpl_acc_order$gpl)
+ggplot(ds_stud_acc, aes(x=gpl, y=acc))+
+  geom_boxplot(aes(col=dataset))+geom_point(aes(col=dataset), position=position_dodge(0.8))+
+  theme(axis.text.x = element_text(angle = 90))+ylab("accuracy")+xlab("")
+ggsave(file="figures/plat_acc_w_ss.png", dpi="print", width=6, height=3.5)
+
 
 # ---  test the model --- #
 #  - compute the full test accuracy
 #  - compute the by-platform test accuracy
-# // TODO: - compute the by-study test accuracy --> plot the accuracy by platform across all
 
-if (organism == "human"){
-  # // TODO look into why test_lab is shorter and fix this
-  list.test_c <- lapply(0:2, function(i) readInTest(organism, i, "common", common.genes)) 
-  list.test_f <- lapply(0:1, function(i) readInTest(organism, i, "full", full.genes))
-  list.test_r <- lapply(0:2, function(i) readInTest(organism, i, "rare", full.genes))
-  test_c_pred <- do.call(rbind, lapply(1:3, function(i) 
-                           pred_out_df(fit, list.test_c[[i]]$rank, list.test_c[[i]]$lab, organism)))
-  
-  test_f_pred <- do.call(rbind, lapply(1:2, function(i) 
-                           pred_out_df(fit, list.test_f[[i]]$rank, list.test_f[[i]]$lab, organism)))
-  
-  test_r_pred <- do.call(rbind, lapply(1:3, function(i) 
-                           pred_out_df(fit, list.test_r[[i]]$rank, list.test_r[[i]]$lab, organism)))
-  
-  train_common <- read_process_mat(sprintf("data/03_silver_std/%s/03_out_mat/train_common_rank.csv", organism), common.genes)
-  train_c_lab <- read_process_lab(sprintf("data/03_silver_std/%s/03_out_mat/train_common_lab.csv", organism))
-  train_c_pred <- pred_out_df(fit, train_common, train_c_lab, organism)
-  
-  summarizeAcc(train_c_pred, "train_common", organism)
-  summarizeAcc(test_c_pred, "test_common", organism)
-  summarizeAcc(rbind(test_c_pred, test_f_pred), "test_full", organism)
-  summarizeAcc(test_f_pred, "test_full_sm", organism)
-  summarizeAcc(test_r_pred, "test_rare", organism)
-} else{
-  test_c <-  readInTest(organism, 0, "common", common.genes)
-  test_c_pred <- pred_out_df(fit, test_c$rank, test_c$lab, organism)
-  summarizeAcc(test_c_pred, "test", organism)
-  
-  if (organism == "mouse"){
-    test_r <-  readInTest(organism, 0, "rare", common.genes)
-    test_r_pred <- pred_out_df(fit, test_r$rank, test_r$lab, organism)
-    summarizeAcc(test_r_pred, "test_rare", organism)
-    
-  }
-} 
-
+# if (organism == "human"){
+#   # // TODO look into why test_lab is shorter and fix this
+#   list.test_c <- lapply(0:2, function(i) readInTest(organism, i, "common", common.genes)) 
+#   list.test_f <- lapply(0:1, function(i) readInTest(organism, i, "full", full.genes))
+#   list.test_r <- lapply(0:2, function(i) readInTest(organism, i, "rare", full.genes))
+#   test_c_pred <- do.call(rbind, lapply(1:3, function(i) 
+#                            pred_out_df(fit, list.test_c[[i]]$rank, list.test_c[[i]]$lab, organism)))
+#   
+#   test_f_pred <- do.call(rbind, lapply(1:2, function(i) 
+#                            pred_out_df(fit, list.test_f[[i]]$rank, list.test_f[[i]]$lab, organism)))
+#   
+#   test_r_pred <- do.call(rbind, lapply(1:3, function(i) 
+#                            pred_out_df(fit, list.test_r[[i]]$rank, list.test_r[[i]]$lab, organism)))
+#   
+#   train_common <- read_process_mat(sprintf("data/03_silver_std/%s/03_out_mat/train_common_rank.csv", organism), common.genes)
+#   train_c_lab <- read_process_lab(sprintf("data/03_silver_std/%s/03_out_mat/train_common_lab.csv", organism))
+#   train_c_pred <- pred_out_df(fit, train_common, train_c_lab, organism)
+#   
+#   summarizeAcc(train_c_pred, "train_common", organism)
+#   summarizeAcc(test_c_pred, "test_common", organism)
+#   summarizeAcc(rbind(test_c_pred, test_f_pred), "test_full", organism)
+#   summarizeAcc(test_f_pred, "test_full_sm", organism)
+#   summarizeAcc(test_r_pred, "test_rare", organism)
+# } else{
+#   test_c <-  readInTest(organism, 0, "common", common.genes)
+#   test_c_pred <- pred_out_df(fit, test_c$rank, test_c$lab, organism)
+#   summarizeAcc(test_c_pred, "test", organism)
+#   
+#   if (organism == "mouse"){
+#     test_r <-  readInTest(organism, 0, "rare", common.genes)
+#     test_r_pred <- pred_out_df(fit, test_r$rank, test_r$lab, organism)
+#     summarizeAcc(test_r_pred, "test_rare", organism)
+#     
+#   }
+# } 
+# 
 
 
 
