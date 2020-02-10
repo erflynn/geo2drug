@@ -108,6 +108,11 @@ acc_by_study <- function(pred_df){
     ungroup()
 }
 
+filterColsByGSE <- function(column_names, gses){
+  column_names[(getGSEsDotted(column_names) %in% gses)]
+}
+
+
 
 summarizeAcc <- function(pred_df, lab, organism){
   pred_acc <- pred_df %>% group_by(gpl) %>% 

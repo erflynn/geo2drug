@@ -1,0 +1,10 @@
+---
+title: "07_diff_genes.Rmd"
+author: "E Flynn"
+date: "2/5/2020"
+output: html_document
+---
+
+I think I am overfitting by using the sex labeling genes.
+
+--> let's do this in a CV framework!

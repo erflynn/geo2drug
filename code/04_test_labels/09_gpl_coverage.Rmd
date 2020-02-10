@@ -1,0 +1,54 @@
+---
+title: "GPL QC supp figure"
+output: html_notebook
+
+editor_options: 
+  chunk_output_type: inline
+---
+
+Describe GPL coverage in mouse and human and get counts for methods. 
+
+```{r}
+require('tidyverse')
+```
+
+```{r}
+organism <- "human"
+
+gpl_qc <- read.table(sprintf("../../data/qc/%s_gpl_mapped.txt", organism),header=FALSE)
+gpl_qc <- gpl_qc %>% mutate(gpl=str_extract_all(V1, "GPL[0-9]+"))
+gpl_list <- read_csv(sprintf("../../data/01_sample_lists/%s_gpl.csv", organism))
+
+length(setdiff(gpl_list$gpl, gpl_qc$gpl)) # 437
+length(gpl_list$gpl) # 963
+gpl_mapped <- intersect(gpl_list$gpl, gpl_qc$gpl)
+length(gpl_mapped) # 526
+
+gse_all <- read_csv("../../data/01_sample_lists/gse_metadata_all_filt.csv")
+gse2 <- gse_all %>% filter(organism=="human", study_type=="oligo") %>% separate_rows(gpl, sep=",") %>% filter(!is.na(gpl))
+
+gse2 %>% filter(gpl %in% gpl_mapped ) %>% nrow() # 17112
+gse2 %>% nrow() # 18678
+gse2 %>% filter(!gpl %in% gpl_mapped) %>% group_by(gpl) %>% count() %>% arrange(desc(n))
+```
+
+```{r}
+organism <- "mouse"
+
+gpl_qc <- read.table(sprintf("../../data/qc/%s_gpl_mapped.txt", organism),header=FALSE)
+gpl_qc <- gpl_qc %>% mutate(gpl=str_extract_all(V1, "GPL[0-9]+"))
+gpl_list <- read_csv(sprintf("../../data/01_sample_lists/%s_gpl.csv", organism))
+
+length(setdiff(gpl_list$gpl, gpl_qc$gpl)) # 55
+length(gpl_list$gpl) # 440
+gpl_mapped <- intersect(gpl_list$gpl, gpl_qc$gpl)
+length(gpl_mapped) # 385
+
+gse_all <- read_csv("../../data/01_sample_lists/gse_metadata_all_filt.csv")
+gse2 <- gse_all %>% filter(organism=="mouse", study_type=="oligo") %>% separate_rows(gpl, sep=",") %>% filter(!is.na(gpl))
+
+gse2 %>% filter(gpl %in% gpl_mapped ) %>% nrow() # 12972
+gse2 %>% nrow() # 13363
+gse2 %>% filter(!gpl %in% gpl_mapped) %>% group_by(gpl) %>% count() %>% arrange(desc(n))
+```
+

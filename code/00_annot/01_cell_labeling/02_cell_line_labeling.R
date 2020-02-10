@@ -22,7 +22,7 @@ require('Hmisc')
 options(stringsAsFactors=FALSE)
 
 # ---- GSE data ---- #
-gse_data <- read.csv("data/01_sample_lists/gse_all_geo_info.csv")
+gse_data <- read.csv("data/01_sample_lists/gse_metadata_all.csv")
 gse_data$str <-sapply(1:nrow(gse_data), function(i) {paste(gse_data[i,c("title", "summary", "overall_design")][!is.na(gse_data[i,c("title", "summary", "overall_design")])], collapse=" ")}) 
 gse_data$cell_line <- str_detect(gse_data$str, "cell line")
 #gsm_filt_w_gse <- fread("data/00_db_data/gsm_all_geo_info.csv")
@@ -132,6 +132,11 @@ colnames(df) <- c("cell line", "mapped")
 table(df)
 
 # write out
-write.table(mapped_all, file="data/02_labeled_data/cell_line_mapped_gse.txt", row.names=FALSE)
-gse_to_keep <- filter(mapped_all, !cell_line & is.na(cl))$gse
+mapped_all2 <- mapped_all %>% group_by(gse) %>% 
+  mutate(cell_line=any(cell_line), cl=paste(cl, collapse=","), accession=paste(accession, collapse=",")) 
+mapped_all2 <- mapped_all2 %>% unique()
+write.table(mapped_all2, file="data/02_labeled_data/cell_line_mapped_gse.txt", row.names=FALSE)
+
+table(mapped_all2$cell_line)
+gse_to_keep <- filter(mapped_all2, !cell_line & cl=="NA")$gse
 write.table(data.frame(gse_to_keep), file="data/02_labeled_data/non_cell_line_gse.txt", row.names=FALSE)

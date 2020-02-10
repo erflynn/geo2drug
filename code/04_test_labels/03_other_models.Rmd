@@ -50,13 +50,18 @@ smallDS <- function(dat, genes, num_samples=500){
   dat_lab2 <- (dat$lab)[keep.cols]
   dat_df <- data.frame(t(dat_exp2))
   dat_df$sex <- as.factor(dat_lab2)
-  return(dat_df)
+  return(list("df"=dat_df, "alt"=dat_exp2, "lab"=dat_lab2))
 }
 
 set.seed(5)
-mm_df <- smallDS(train[[1]], sex_chr)
-ss_df <- smallDS(ss[[1]], sex_chr)
+mmr <- smallDS(train[[1]], sex_chr)
+ssr <- smallDS(ss[[1]], sex_chr)
+mm_df <- mmr$df
+ss_df <- ssr$df
 
+#data("sex_lab_genes")
+#fit2 <- trainSexLab(as.matrix(mmr$alt), unlist(mmr$lab))
+#pred_ss <- predSexLab(fit2, as.matrix(ssr$alt), unlist(ssr$lab))
 ```
 
 TODO:

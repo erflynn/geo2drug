@@ -64,7 +64,7 @@ calcAcc(c(pred_test, pred_test2), c(test1_lab, test2_lab)) # 88.6%
 
 
 confMat(pred_ss, ss1_lab)
-calcAcc(pred_ss, ss1_lab ) # 80.8% accuracy 
+calcAcc(pred_ss, ss1_lab ) # 82.2% accuracy 
 confMat(pred_ss2, ss2_lab)
 calcAcc(pred_ss2, ss2_lab ) # 94.1% accuracy
 
@@ -83,7 +83,11 @@ ss_ref <- read_csv("data/01_sample_lists/human_single_sex_studies.csv")
 ss_ref2 <- ss_ref %>% sepReformatGPL()
 silver_std <- read_csv(sprintf("data/01_sample_lists/silver_std_%s_reform.csv", organism))
 train_pred_df <- pred_out_df(fit, train_rank, train_lab, organism, silver_std)
-train_stud <- acc_by_study(train_pred_df)
+train_rm <- train_pred_df %>% group_by(gse) %>% summarize(num_f=sum(true_sex==1), num_m=sum(true_sex==0)) %>%
+  filter(num_f==0 | num_m==0)
+train_pred_df2 <- train_pred_df %>% filter(!gse %in% train_rm$gse)
+calcAcc(train_pred_df2$pred_sex, train_pred_df2$true_sex)
+train_stud <- acc_by_study(train_pred_df2)
 
 ss_pred_df <- pred_out_df(fit, cbind(ss1_rank, ss2_rank), 
                           c(ss1_lab, ss2_lab), organism, ss_ref2)
@@ -91,7 +95,12 @@ ss_stud <- acc_by_study(ss_pred_df)
 
 test_pred_df <- pred_out_df(fit, cbind(test1_rank, test2_rank), 
                           c(test1_lab, test2_lab), organism, silver_std)
-test_stud <- acc_by_study(test_pred_df)
+
+test_rm <- test_pred_df %>% group_by(gse) %>% summarize(num_f=sum(true_sex==1), num_m=sum(true_sex==0)) %>%
+  filter(num_f==0 | num_m==0)
+test_pred_df2 <- test_pred_df %>% filter(!gse %in% test_rm$gse)
+calcAcc(test_pred_df2$pred_sex, test_pred_df2$true_sex)
+test_stud <- acc_by_study(test_pred_df2)
 
 # --- plot the accuracy --- #
 test_stud$dataset <- "test"
@@ -107,10 +116,41 @@ ggplot(ds_stud_acc, aes(x=gpl, y=acc))+
   theme(axis.text.x = element_text(angle = 90))+ylab("accuracy")+xlab("")
 ggsave(file="figures/plat_acc_w_ss.png", dpi="print", width=6, height=3.5)
 
+# ---- visualize the SS data by platform ---- #
+summarizeAcc2 <- function(pred_df){
+  pred_acc <- pred_df %>% group_by(gpl) %>% 
+    summarize(num_studies=length(unique(gse)), 
+              true_pred=sum(true_sex==pred_sex, na.rm=TRUE), num_samples=length(true_sex)) %>%
+    mutate(acc=true_pred/num_samples)
+  pred_overall <- pred_df %>% 
+    summarize(num_studies=length(unique(gse)), true_pred=sum(true_sex==pred_sex, na.rm=TRUE), 
+              num_samples=length(true_sex)) %>%
+    mutate(acc=true_pred/num_samples) %>%
+    mutate(gpl="overall") %>% select(gpl, everything())
+  pred_acc2 <- rbind(pred_acc, pred_overall)
+  return(pred_acc2)
+}
+
+train_gpl <- summarizeAcc2(train_pred_df2)
+test_gpl <- summarizeAcc2(test_pred_df2)
+ss_gpl <- summarizeAcc2(ss_pred_df)
+ggplot(train_pred_df2 %>% semi_join(train_stud %>% filter(acc < 0.9), by="gse"), aes(x=score_f, y=score_m))+geom_point(aes(color=true_sex, alpha=0.3))+
+  geom_abline(slope=1, intercept=fit$threshold)+facet_wrap(vars(gpl,gse))
+ggplot(test_pred_df2 %>% semi_join(test_stud %>% filter(acc < 0.9), by="gse"), aes(x=score_f, y=score_m))+geom_point(aes(color=true_sex, alpha=0.3))+
+  geom_abline(slope=1, intercept=fit$threshold)+facet_wrap(vars(gpl, gse))
+ggsave("figures/test_poor_perf.png")
+
+ggplot(ss_pred_df %>% semi_join(ss_stud %>% filter(acc < 0.9), by="gse"), aes(x=score_f, y=score_m))+geom_point(aes(color=true_sex, alpha=0.3))+
+  geom_abline(slope=1, intercept=fit$threshold)+facet_wrap(vars(gpl, gse))
+ggsave("figures/ss_poor_perf.png")
+# eda on the terrible studies - what is going here?
+
 
 # ---  test the model --- #
 #  - compute the full test accuracy
 #  - compute the by-platform test accuracy
+
+
 
 # if (organism == "human"){
 #   # // TODO look into why test_lab is shorter and fix this

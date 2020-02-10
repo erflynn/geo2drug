@@ -8,7 +8,7 @@ options(stringsAsFactors = FALSE)
 
 # read in the metadata
 # ---- GSE data ---- #
-gse_data <- read.csv("data/01_sample_lists/gse_all_geo_info.csv")
+gse_data <- read.csv("data/01_sample_lists/gse_metadata_all.csv")
 gse_data$str <-sapply(1:nrow(gse_data), function(i) {paste(gse_data[i,c("title", "summary", "overall_design")][!is.na(gse_data[i,c("title", "summary", "overall_design")])], collapse=" ")}) 
 
 # ----- drug data ------ #
@@ -55,9 +55,8 @@ drug_stopwords <- c("same", "dmso", "water", "sage", "camp", "balance",  "biotin
 # pull in additional curated stopwords
 jake_stopwords <- read.delim("data/00_db_data/jake_stopwords.txt", head=FALSE)$V1
 comb_names2 <- filter(select(comb_names, c("name", "dbID", "gse")), ! name  %in% union(drug_stopwords, jake_stopwords))
-length(unique(comb_names2$gse)) # 9470
-length(unique(comb_names2$dbID)) # 1093
-
+length(unique(comb_names2$gse)) # 9735
+length(unique(comb_names2$dbID)) # 1104
 
 
 # join with ATC
@@ -67,11 +66,28 @@ comb_names3 <- left_join(comb_names2, drug_full_info[,c("dbID", "ATC")], by="dbI
 drug_data_gse <- inner_join(drug_full_info[,c("dbID", "name")], select(comb_names3, c("dbID", "ATC", "gse")))
 
 
-drug2 <- filter(drug_data_gse, ! name %in% c("Glucose", "D-glucose", "Oxygen", "Nitrogen", "L-Glutamine", "Sucrose"))
-length(unique(drug2$dbID)) # [1] 1087
-length(unique(drug2$gse)) # [1] 8480
+drug2 <- filter(drug_data_gse, ! name %in% 
+                  c("Glucose", "D-glucose", "Oxygen", "Nitrogen", "L-Glutamine", "Sucrose"))
+length(unique(drug2$dbID)) # [1] 1098
+length(unique(drug2$gse)) # [1] 8834
 
-write.table(drug_data_gse, file="data/02_labeled_data/drugbank_mapped_gse.txt", row.names=FALSE)
+# add a mouse or human flag
+drug2_gse <- left_join(drug2, gse_data %>% select(gse, gpl, organism, study_type))
 
+# FYI these are multimapping!
+write.table(drug2_gse, file="data/02_labeled_data/drugbank_mapped_gse.txt", row.names=FALSE, sep="\t")
+
+d2 <- drug2_gse %>% select(gse, organism, study_type) %>% unique()
+d2 %>% group_by(organism, study_type) %>% count()
+# human    oligo       3883
+# human    seq         1017
+# mouse    oligo       2862
+# mouse    seq         1072
+
+# write out download lists
+drug2_gse %>% filter(organism=="mouse" & study_type=="oligo") %>% select(gse) %>% unique() %>%
+  write_csv("data/01_sample_lists/mouse_oligo_drug.csv") # 2862
+drug2_gse %>% filter(organism=="human" & study_type=="oligo") %>% select(gse) %>% unique() %>% 
+  write_csv("data/01_sample_lists/human_oligo_drug.csv") # 3883
 
 

@@ -2,7 +2,7 @@
 # E Flynn
 # Last Updated: 9/23/2019
 #
-# Grab all the GEOMetadb data for mouse, rat, and human at the GSM, GSE level.
+# Grab all the GEOMetadb data for mouse and human at the GSM, GSE level.
 # Deduplicate by mapping each sample to the earliest study it is present in.
 
 source("code/utils/labeling_utils.R")
@@ -15,19 +15,12 @@ con <- dbConnect(SQLite(), GEOMETADB_PATH)
 gsms <- dbGetQuery(con, 'SELECT * FROM gsm ;') %>% 
   select("gsm", "series_id", "gpl", "organism_ch1", "title", "description", "source_name_ch1", "characteristics_ch1", "molecule_ch1", "channel_count") %>%
   rename("gse"="series_id") %>%
-  filter(str_detect(organism_ch1, "Homo sapiens|Mus musculus|Rattus norvegicus"),
+  filter(str_detect(organism_ch1, "Homo sapiens|Mus musculus"),
          molecule_ch1 == "total RNA",
          channel_count == 1) %>% 
   select(-channel_count, -molecule_ch1) %>%
   separate_rows(organism_ch1, sep=";") %>%
   as_tibble() 
-
-# is the RNA-seq GPL in here?
-# if it is - keep the metadata for these
-
-# data_row_count > 10k | data_row_count==0
-# do we want to filter out other technology?
-#
 
 dbDisconnect(con)
 
@@ -38,127 +31,133 @@ dbDisconnect(con)
 gsms2 <- gsms %>%
   mutate(organism_ch1 = ifelse(str_detect(organism_ch1, "Mus musculus"), 
                             "Mus musculus", organism_ch1)) %>% 
-  mutate(organism_ch1 = ifelse(str_detect(organism_ch1, "Rattus norvegicus"), 
-                                 "Rattus norvegicus", organism_ch1)) %>%
   mutate(organism_ch1 = ifelse(str_detect(organism_ch1, "Homo sapiens"), 
                              "Homo sapiens", organism_ch1))  %>%
-  filter(organism_ch1 %in% c("Homo sapiens", "Mus musculus", "Rattus norvegicus")) %>%
-  separate_rows(gse, sep=",") # separate out by study
+  filter(organism_ch1 %in% c("Homo sapiens", "Mus musculus")) 
 
 
 # ---  divide by species --- #
+MIN.ROWS <- 10000
+# NOTE: by filtering for at least 10k rows, we remove all the HTS data
+LIST.OLIGO.TECH <- c("in situ oligonucleotide", "spotted oligonucleotide", "spotted DNA/cDNA", "oligonucleotide beads")
+# this removes MPSS, RT-PCR
 
 
+con <- dbConnect(SQLite(), GEOMETADB_PATH)
 
 human <- filter(gsms2, organism_ch1=="Homo sapiens") %>% 
   select(gse, gsm, everything())
-rat <- filter(gsms2, organism_ch1=="Rattus norvegicus") %>% 
-  select(gse, gsm, everything())
+human_gpls <- dbGetQuery(con, sprintf("SELECT gpl, organism, technology, data_row_count FROM gpl WHERE gpl IN ('%s');",
+                                      formattedList(unique(human$gpl)))) %>% 
+  unique() # 2001 
+human_gpls2 <- human_gpls %>% filter(data_row_count >= MIN.ROWS)  %>%
+  mutate(organism = ifelse(str_detect(organism, "Homo sapiens"), 
+                           "Homo sapiens", organism)) # 1005
+human_gpls3 <- human_gpls2 %>% filter(organism=="Homo sapiens") # 969
+human_gpls4 <- human_gpls3 %>% filter(technology %in% LIST.OLIGO.TECH) # 963
+write_csv(human_gpls4, "data/01_sample_lists/human_gpl.csv")
+human_gsms <- human %>% filter(gpl %in% human_gpls4$gpl) # 754131
+human_gsms %>% write_csv("data/01_sample_lists/human_gsms.csv")
+
+human_gses <- human_gsms %>% separate_rows(gse, sep=",") %>% select(gse) %>% unique() # 19837
+
 mouse <- filter(gsms2, organism_ch1=="Mus musculus") %>% 
   select(gse, gsm, everything())
-
-# --- get GPL platform mapping --- #
-
-#' Get the organisms for a list of GPLs
-#'
-#' @param df - the dataframe containing a gpl column
-#' @param org_name - the organism name
-#' @param con - connection to GEOMetadb
-#' 
-#' @return map_gpls - the org mapping to GPLs
-getOrgMatchingGPL <- function(df, org_name, con){
-  org_gpl <- df %>% select(gpl) %>% unique()
-  map_gpls <- dbGetQuery(con, sprintf("SELECT gpl, organism, data_row_count FROM gpl WHERE gpl IN ('%s');",
-                                      formattedList(org_gpl$gpl))) %>%
-    unique() %>% 
-    filter(data_row_count >= MIN_ROWS) %>%
-    mutate(organism = ifelse(str_detect(organism, org_name),
-                                 org_name, organism)) %>%
-    as_tibble() 
-  matching_dat <- inner_join(map_gpls, df, by="gpl") %>%
-    filter(organism_ch1==organism) %>%
-    unique()
-  return(matching_dat)
-}
-con <- dbConnect(SQLite(), GEOMETADB_PATH)
-
-hs <- getOrgMatchingGPL(human, "Homo sapiens", con)
-rn <- getOrgMatchingGPL(rat, "Rattus norvegicus", con)
-mm <- getOrgMatchingGPL(mouse, "Mus musculus", con)
-
+mouse_gpls <- dbGetQuery(con, sprintf("SELECT gpl, organism, technology, data_row_count FROM gpl WHERE gpl IN ('%s');",
+                                      formattedList(unique(mouse$gpl)))) %>% 
+  unique() # 1035 
 dbDisconnect(con)
 
-human_rat <- intersect(hs$gsm, rn$gsm) # none
-human_mouse <- intersect(hs$gsm, mm$gsm)
-rat_mouse <- intersect(mm$gsm, rn$gsm) # none
+mouse_gpls2 <- mouse_gpls %>% filter(data_row_count >= MIN.ROWS)  %>%
+  mutate(organism = ifelse(str_detect(organism, "Mus musculus"), 
+                           "Mus musculus", organism)) # 481
+mouse_gpls3 <- mouse_gpls2 %>% filter(organism=="Mus musculus") # 451
+mouse_gpls4 <- mouse_gpls3 %>% filter(technology %in% LIST.OLIGO.TECH) # 440
 
-# mult_org_dat
-#   gsm gse gpl organism mult_resolved?
+write_csv(mouse_gpls4, "data/01_sample_lists/mouse_gpl.csv")
+mouse_gsms <- mouse %>% filter(gpl %in% mouse_gpls4$gpl) # 216599
+
+mouse_gsms %>% write_csv("data/01_sample_lists/mouse_gsms.csv")
+mouse_gses <- mouse_gsms %>% separate_rows(gse, sep=",") %>% select(gse) %>% unique() # 14797
+
+# there is a tiny bit of overlap - 22 samples
+human_mouse <- intersect(human_gsms$gsm, mouse_gsms$gsm) 
 write_csv(data.frame(human_mouse),"data/01_sample_lists/multiple_organism_data.csv" )
 
-gse_list <- c(rn$gse, hs$gse, mm$gse) 
+oligo_gse_list <- c(human_gses$gse, mouse_gses$gse) 
+
+
+# look at the metadata for HTS studies -- this is from ARCHS4
+miceadds::load.Rdata("data/00_db_data/human_gsm_meta.rda", "human_meta_seq")
+miceadds::load.Rdata("data/00_db_data/mouse_gsm_meta.rda", "mouse_meta_seq")
+
+human_seq_gsms <- names(human_meta_seq) # 238,522
+mouse_seq_gsms <- names(mouse_meta_seq) # 284,907
+
+# if there are multiple GSEs for a GSM, they are in a list --> this works
+human_seq_gses <- unique(unlist(lapply(human_meta_seq, function(x) x$Sample_series_id))) # 9124
+mouse_seq_gses <- unique(unlist(lapply(mouse_meta_seq, function(x) x$Sample_series_id))) # 9642
+
+seq_gse_list <- c(human_seq_gses, mouse_seq_gses)
+gse_list <- c(oligo_gse_list, seq_gse_list) # 53400
 
 # ----grab the study data for these gsms ---- #
-
+# we want this for BOTH seq and microarray data
 con <- dbConnect(SQLite(), GEOMETADB_PATH)
 
 gses <- dbGetQuery(con, sprintf("SELECT * FROM gse WHERE gse IN ('%s');", 
                                 formattedList(gse_list)))
 gse_filt <- gses %>% 
-  select("gse", "title", "summary", "pubmed_id", "submission_date", "overall_design")
+  select("gse", "title", "pubmed_id", "submission_date", "overall_design",  "summary") 
+# 49686
+
+dbDisconnect(con)
+
+gse_filt2 <- gse_filt %>% mutate(study_type=case_when(
+  gse %in% human_seq_gses ~ "human_seq",
+  gse %in% mouse_seq_gses ~ "mouse_seq",
+  gse %in% human_gses$gse ~ "human_oligo",
+  gse %in% mouse_gses$gse ~ "mouse_oligo"
+))
+gse_filt3 <- gse_filt2 %>% separate(study_type, into=c("organism", "study_type"), sep="_")
+
+# add a GPL column
+con <- dbConnect(SQLite(), GEOMETADB_PATH)
+
+gse_gpl <- dbGetQuery(con, sprintf("SELECT gse, gpl FROM gse_gpl WHERE gse IN ('%s');", 
+                                   formattedList(gse_filt3$gse)))
+
+dbDisconnect(con)
+gse_gpl2 <- gse_gpl %>% group_by(gse) %>% summarize(gpl=paste(gpl, collapse=",")) %>% ungroup()
+gse_filt4 <- left_join(gse_filt3, gse_gpl2) %>% select(gse, gpl, organism, study_type, everything())
+write_csv(gse_filt4, "data/01_sample_lists/gse_metadata_all.csv")
+
+# -----  get duplicated and non-duplicated GSMs ----- #
+con <- dbConnect(SQLite(), GEOMETADB_PATH)
+
+micro <- rbind((mouse_gsms %>% select(gse, gsm)), (human_gsms %>% select(gse, gsm)))
+micro2 <- micro %>% separate_rows(gse, sep=",") 
+
+seq_gse_gsm <- dbGetQuery(con, sprintf("SELECT gse, gsm FROM gse_gsm WHERE gsm IN ('%s');", 
+                                   formattedList(c(human_seq_gsms, mouse_seq_gsms))))
 
 dbDisconnect(con)
 
 # map a sample to study with the earliest date if it is duplicated
-sample_study_date <- inner_join(select(gsms2, c("gsm", "gse")), 
-                                select(gse_filt, c("gse", "submission_date"))) %>% 
+sample_study_date <- inner_join(select(rbind(micro2, seq_gse_gsm), c("gsm", "gse")),
+                                select(gse_filt4, c("gse", "submission_date"))) %>%
   mutate(submission_date=ymd(submission_date))
 
-mapped_to_earliest <- sample_study_date %>% 
-  group_by(gsm) %>% 
+mapped_to_earliest <- sample_study_date %>%
+  group_by(gsm) %>%
   summarize(gse= gse[which.min(submission_date)]) # SLOW
 
-write_csv(mapped_to_earliest, "data/01_sample_lists/gse_gsm_all_geo_dedup.csv")
+write_csv(mapped_to_earliest, "data/01_sample_lists/gse_gsm_all_dedup.csv")
 
+# now do a little filtering
+gse_list2 <- unique(mapped_to_earliest$gse) # 41941 / 53400
 
-gse_list2 <- unique(mapped_to_earliest$gse)
-
-
-# write out the gse metadata
-gse_data <- gses %>% 
-  select("gse", "title", "pubmed_id", "submission_date", "overall_design",  "summary") %>% 
-  filter(gse %in% gse_list2)
-
-# add in an organism column?
-combined_gsm_gse <- do.call(rbind, list(mm, rn, hs))
-gse_data_org <- left_join(gse_data, select(combined_gsm_gse, gse, organism_ch1), by="gse") %>%
-  select(gse, organism_ch1, everything()) %>%
-  rename(organism=organism_ch1) %>%
-  unique()  %>%
-  as_tibble()
-
-
-write_csv(gse_data_org, "data/01_sample_lists/gse_all_geo_info.csv")
-
-# filter and write out the mouse, rat, and human data
-mm2 <- inner_join(mm, mapped_to_earliest, by=c("gsm", "gse"))  %>% 
-  select(-organism, -organism_ch1, -data_row_count) %>% 
-  select( gse, gsm, everything())
-rn2 <- inner_join(rn, mapped_to_earliest, by=c("gsm", "gse")) %>% 
-  select(-organism, -organism_ch1, -data_row_count) %>% 
-  select( gse, gsm, everything())
-hs2 <- inner_join(hs, mapped_to_earliest, by=c("gsm", "gse")) %>% 
-  select(-organism, -organism_ch1, -data_row_count) %>% 
-  select( gse, gsm, everything())
-
-
-mm2 %>% write_csv("data/01_sample_lists/mouse_gse_gsm.csv")
-rn2 %>% write_csv("data/01_sample_lists/rat_gse_gsm.csv")
-hs2 %>% write_csv("data/01_sample_lists/human_gse_gsm.csv")
-
-mm2 %>% select(gse) %>% unique() %>% write_csv("data/01_sample_lists/gse_mouse.csv")
-rn2 %>% select(gse) %>% unique() %>% write_csv("data/01_sample_lists/gse_rat.csv")
-hs2 %>% select(gse) %>% unique() %>% write_csv("data/01_sample_lists/gse_human.csv")
-
+gse_filt5 <- gse_filt4 %>% filter(gse %in% gse_list2)
+write_csv(gse_filt5, "data/01_sample_lists/gse_metadata_all_filt.csv")
 
 

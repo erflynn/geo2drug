@@ -46,9 +46,6 @@ load(file=sprintf("data/04_fits/fit_%s_0304.RData", organism))
 
 # ---------------------------#
 
-filterColsByGSE <- function(column_names, gses){
-  column_names[(getGSEsDotted(column_names) %in% gses)]
-}
 
 downSampleTestDat <- function(fraction_m, gse, test_expr, test_lab){
   test_cols <- filterColsByGSE(colnames(test_expr), c(gse))
@@ -188,14 +185,23 @@ set.seed(1120)
 #load("data/train.RData")
 #load("data/extended_test.RData")
 set.seed(12)
-intervals <- c(0, 0.15, 0.3, 0.6, 0.9, 1)
+acc_res0.05 <- calcAccDown(0.05, train[[1]]$expr, train_rank, 
+                          train_lab, test[[1]]$expr, test1_rank, test1_lab)
+acc_res0.95 <- calcAccDown(0.95, train[[1]]$expr, train_rank, 
+                           train_lab, test[[1]]$expr, test1_rank, test1_lab)
+
+
+intervals <- c(0, 0.05, 0.15, 0.3, 0.6, 0.9, 0.95, 1)
 acc_res <-   lapply(intervals, function(frac)
   calcAccDown(frac, train[[1]]$expr, train_rank, 
               train_lab, test[[1]]$expr, test1_rank, test1_lab))
 frac_acc <- do.call(rbind, lapply(1:length(acc_res), function(i) dfFracAcc(intervals[[i]],acc_res[[i]])))
 # plot the accuracy across fractions
-frac_acc$method[frac_acc$method=="rank"] <- "exprsex"
-save(frac_acc, file="data/05_performance/frac_acc_0204.RData")
-ggplot(frac_acc, aes(frac, accuracy, col=method))+xlab("fraction males")+geom_line(size=1.5, alpha=0.9)+geom_point(size=1.5)
+frac_acc0.05 <- dfFracAcc(0.05, acc_res0.05)
+frac_acc0.95 <- dfFracAcc(0.95, acc_res0.95)
+frac_acc2 <- frac_acc %>% bind_rows(frac_acc0.05) %>% bind_rows(frac_acc0.95)
+frac_acc2$method[frac_acc2$method=="rank"] <- "exprsex"
+save(frac_acc2, file="data/05_performance/frac_acc2_0204.RData")
+ggplot(frac_acc2, aes(frac, accuracy, col=method))+xlab("fraction males")+geom_line(size=1.5, alpha=0.9)+geom_point(size=1.5)
 ggsave("figures/fractional_acc.png", dpi="print", width=5, height=3.5)
 ##

@@ -35,7 +35,8 @@ lapply(gse.list, function(f){
     }
     counts <- matched_lab %>% filter(text_sex %in% c("male", "female")) %>% group_by(text_sex) %>% count()
     print(counts)
-    if(nrow(matched_lab) > 1 & all(counts$n >= 10)){
+    if(nrow(matched_lab) > 1 & all(counts$n >= 10)){ 
+      # // TODO: BUGGGGGG!!! if none of something it shouldn't be here
     	print(gse.id)
     	write_csv(matched_lab, sprintf("%s/%s_pheno.csv", out.dir, gse.id))
     } else {
