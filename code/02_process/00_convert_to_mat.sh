@@ -2,7 +2,7 @@
 #SBATCH --job-name=convert_mat
 #SBATCH --output=logs/convert_mat_%A_%a.out
 #SBATCH --error=logs/convert_mat_%A_%a.err
-#SBATCH --time=5:00:00 
+#SBATCH --time=8:00:00 
 #SBATCH --mem=15000
 #SBATCH --partition=rbaltman
 

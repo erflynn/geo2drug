@@ -15,7 +15,7 @@ source("code/utils/sex_lab_utils.R")
 
 options(stringsAsFactors=FALSE)
 
-SIZE.CHUNK <- 50
+SIZE.CHUNK <- 100
 
 # parse arguments
 args <- commandArgs(trailingOnly=TRUE)
