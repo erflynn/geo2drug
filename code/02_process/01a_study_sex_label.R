@@ -8,6 +8,7 @@ require('MetaIntegrator')
 require('massiR')
 require('miceadds')
 
+source("code/utils/general_utils.R")
 source("code/utils/sex_lab_utils.R")
 
 
@@ -30,11 +31,10 @@ out_dir <- OUT.DIR
 
 gse.list <- sapply(list.files(MAT.DIR), function(x) strsplit(x, "_")[[1]][[1]])
 
-NUM.CHUNKS <- ceiling(length(gse.list)/SIZE.CHUNK)
-end_idx <- ifelse((NUM.CHUNKS-1) == idx ,length(gse.list), (idx+1)*SIZE.CHUNK)
-gse.list <- gse.list[(idx*SIZE.CHUNK+1):end_idx]
 
-print(gse.list)
+chunk.gses <- extractChunk(gse.list, idx, SIZE.CHUNK)
+
+print(chunk.gses)
 
 combined_data2 <- read.csv(sprintf("data/01_sample_lists/%s_ale_sex_lab.csv", organism))
 larger_annot2 <- combined_data2
@@ -145,7 +145,7 @@ studySexLabel <- function(geo.obj, gse.id){
 
 
 
-lapply(gse.list, function(gse.id){
+lapply(chunk.gses, function(gse.id){
 print(gse.id)
 gse.f <- sprintf("%s/%s_mat.RData", MAT.DIR, gse.id)
 

@@ -4,6 +4,7 @@
 
 require('MetaIntegrator')
 require('tidyverse')
+source("code/utils/general_utils.R")
 
 args <- commandArgs(trailingOnly=TRUE)
 organism <- args[1]
@@ -16,11 +17,6 @@ consensus_genes <- read.csv(sprintf("data/consensus_genes_%s.csv", organism))
 consensus.genes <- sapply(consensus_genes$consensus.genes, as.character)
 
 # // TODO - move this to a common location
-extractChunk <- function(my.list, idx, SIZE.CHUNK=50){
-  NUM.CHUNKS <- ceiling(length(my.list)/SIZE.CHUNK)
-  end_idx <- ifelse((NUM.CHUNKS-1) == idx ,length(my.list), (idx+1)*SIZE.CHUNK)
-  return(my.list[(idx*SIZE.CHUNK+1):end_idx])
-}
 
 
 # function to construct the matirx

@@ -94,9 +94,16 @@ miceadds::load.Rdata("data/00_db_data/mouse_gsm_meta.rda", "mouse_meta_seq")
 human_seq_gsms <- names(human_meta_seq) # 238,522
 mouse_seq_gsms <- names(mouse_meta_seq) # 284,907
 
+
 # if there are multiple GSEs for a GSM, they are in a list --> this works
 human_seq_gses <- unique(unlist(lapply(human_meta_seq, function(x) x$Sample_series_id))) # 9124
 mouse_seq_gses <- unique(unlist(lapply(mouse_meta_seq, function(x) x$Sample_series_id))) # 9642
+
+human_seq_gpls <- unique(unlist(lapply(human_meta_seq, function(x) x$Sample_platform_id))) # 8
+mouse_seq_gpls <- unique(unlist(lapply(mouse_meta_seq, function(x) x$Sample_platform_id))) # 8
+cbind("human"=human_seq_gpls, "mouse"=mouse_seq_gpls) %>% data.frame() %>% write_csv("data/01_sample_lists/seq_gpls.csv")
+
+
 
 seq_gse_list <- c(human_seq_gses, mouse_seq_gses)
 gse_list <- c(oligo_gse_list, seq_gse_list) # 53400
@@ -111,33 +118,29 @@ gse_filt <- gses %>%
   select("gse", "title", "pubmed_id", "submission_date", "overall_design",  "summary") 
 # 49686
 
-dbDisconnect(con)
-
-gse_filt2 <- gse_filt %>% mutate(study_type=case_when(
-  gse %in% human_seq_gses ~ "human_seq",
-  gse %in% mouse_seq_gses ~ "mouse_seq",
-  gse %in% human_gses$gse ~ "human_oligo",
-  gse %in% mouse_gses$gse ~ "mouse_oligo"
-))
-gse_filt3 <- gse_filt2 %>% separate(study_type, into=c("organism", "study_type"), sep="_")
-
 # add a GPL column
-con <- dbConnect(SQLite(), GEOMETADB_PATH)
-
 gse_gpl <- dbGetQuery(con, sprintf("SELECT gse, gpl FROM gse_gpl WHERE gse IN ('%s');", 
-                                   formattedList(gse_filt3$gse)))
-
+                                   formattedList(gse_filt$gse)))
 dbDisconnect(con)
-gse_gpl2 <- gse_gpl %>% group_by(gse) %>% summarize(gpl=paste(gpl, collapse=",")) %>% ungroup()
-gse_filt4 <- left_join(gse_filt3, gse_gpl2) %>% select(gse, gpl, organism, study_type, everything())
-write_csv(gse_filt4, "data/01_sample_lists/gse_metadata_all.csv")
+gse_gpl2 <- gse_gpl %>% group_by(gse) %>% dplyr::summarize(gpl=paste(gpl, collapse=",")) %>% ungroup()
+gse_filt2 <- left_join(gse_filt, gse_gpl2)
+
+gse_filt3 <- gse_filt2 %>% mutate(study_type=case_when(
+  gpl %in% human_seq_gpls ~ "human_seq",
+  gpl %in% mouse_seq_gpls ~ "mouse_seq",
+  gpl %in% human_gpls4 ~ "human_oligo",
+  gpl %in% mouse_gpls4 ~ "mouse_oligo"
+))
+gse_filt4 <- gse_filt3 %>% separate(study_type, into=c("organism", "plat_type"), sep="_")
+
+gse_filt5 <- gse_filt4 %>% select(gse, gpl, organism, plat_type, everything())
+write_csv(gse_filt5, "data/01_sample_lists/gse_metadata_all.csv")
 
 # -----  get duplicated and non-duplicated GSMs ----- #
-con <- dbConnect(SQLite(), GEOMETADB_PATH)
 
 micro <- rbind((mouse_gsms %>% select(gse, gsm)), (human_gsms %>% select(gse, gsm)))
 micro2 <- micro %>% separate_rows(gse, sep=",") 
-
+con <- dbConnect(SQLite(), GEOMETADB_PATH)
 seq_gse_gsm <- dbGetQuery(con, sprintf("SELECT gse, gsm FROM gse_gsm WHERE gsm IN ('%s');", 
                                    formattedList(c(human_seq_gsms, mouse_seq_gsms))))
 
@@ -150,7 +153,7 @@ sample_study_date <- inner_join(select(rbind(micro2, seq_gse_gsm), c("gsm", "gse
 
 mapped_to_earliest <- sample_study_date %>%
   group_by(gsm) %>%
-  summarize(gse= gse[which.min(submission_date)]) # SLOW
+  dplyr::summarize(gse= gse[which.min(submission_date)]) # SLOW
 
 write_csv(mapped_to_earliest, "data/01_sample_lists/gse_gsm_all_dedup.csv")
 

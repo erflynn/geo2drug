@@ -5,6 +5,8 @@
 require('exprsex')
 require('MetaIntegrator')
 require('R.utils')
+source("code/utils/general_utils.R")
+
 SIZE.CHUNK <- 50
 
 # parse arguments
@@ -20,13 +22,10 @@ GPL.DIR <- sprintf("gpl_ref/%s/", organism)
 idx <- as.numeric(args[4])
 print(idx)
 
+list.gses <- gse.list[,1]
 
-
-NUM.CHUNKS <- ceiling(nrow(gse.list)/SIZE.CHUNK)
-end_idx <- ifelse((NUM.CHUNKS-1) == idx ,nrow(gse.list), (idx+1)*SIZE.CHUNK)
-gse.list <- gse.list[(idx*SIZE.CHUNK+1):end_idx,]
-
-print(gse.list[,1])
+chunk.gses <- extractChunk(list.gses, idx, SIZE.CHUNK)
+print(chunk.gses)
 
 downloadData <- function(gse){
   print(gse)
@@ -48,7 +47,7 @@ downloadData <- function(gse){
   }
 }
 
-gses.to.run <- setdiff(gse.list[,1], c("GSE25219", "GSE18927", "GSE28387", "GSE30727", "GSE37138", "GSE50421", "GSE77714", "GSE19090"))
+gses.to.run <- setdiff(chunk.gses, c("GSE25219", "GSE18927", "GSE28387", "GSE30727", "GSE37138", "GSE50421", "GSE77714", "GSE19090"))
 lapply(gses.to.run, function(gse){
   tryCatch({
   res <- withTimeout({

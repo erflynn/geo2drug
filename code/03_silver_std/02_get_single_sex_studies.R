@@ -9,11 +9,11 @@ args <- commandArgs(trailingOnly = TRUE)
 organism <- args[1]
 
 gse_counts <- read.csv(sprintf("data/01_sample_lists/%s_gse_counts.csv", organism))
-all_meta <- read_csv("data/01_sample_lists/gse_metadata_all.csv")
-
+seq_gpls <- read_csv("data/01_sample_lists/seq_gpls.csv") %>% select(organism)
 # bin and count
 gse_counts %>% mutate(size_grp=ifelse(total > 1000, ">1000", ifelse(total > 100, ">100", ifelse(total > 10, ">10", "0-10")))) %>%
-  group_by(study_type, size_grp) %>% mutate("organism"=organism) %>% count() %>% write_csv(sprintf("data/01_sample_lists/%s_gse_counts_size.csv", organism))
+  group_by(study_type, size_grp) %>% mutate("organism"=organism) %>% count() %>% 
+  write_csv(sprintf("data/01_sample_lists/%s_gse_counts_size.csv", organism))
 
 gse_to_keep <- read.delim("data/02_labeled_data/non_cell_line_gse.txt")
 f_only_no_cell <- filter(gse_counts, gse %in% gse_to_keep$gse_to_keep) %>% 
@@ -21,11 +21,17 @@ f_only_no_cell <- filter(gse_counts, gse %in% gse_to_keep$gse_to_keep) %>%
 m_only_no_cell <- filter(gse_counts, gse %in% gse_to_keep$gse_to_keep) %>% 
   filter(study_type == "m" & num_m >= 10 & num_m==total)
 
-f_w_plat <- f_only_no_cell %>% left_join(all_meta %>% rename(plat_type=study_type) %>% select(gse, plat_type))
-f_w_plat %>% group_by(plat_type) %>% count() # 485 oligo, 61 seq
+f_w_plat <- f_only_no_cell %>% mutate(plat_type=ifelse(gpl %in% unlist(seq_gpls[,1]), "seq", "oligo"))
+f_w_plat %>% group_by(plat_type) %>% count() # 490 oligo, 56 seq for human; 596 oligo, 75 seq for mouse
 
-m_w_plat <- m_only_no_cell %>% left_join(all_meta %>% rename(plat_type=study_type) %>% select(gse, plat_type))
-m_w_plat %>% group_by(plat_type) %>% count() # 462 oligo, 77 seq
+m_w_plat <- m_only_no_cell %>% mutate(plat_type=ifelse(gpl %in% unlist(seq_gpls[,1]), "seq", "oligo"))
+m_w_plat %>% group_by(plat_type) %>% count() # 457 oligo, 82 seq for human; 1092 oligo, 150 seq for mouse
+
+ss_plat <- rbind(f_w_plat, m_w_plat) 
+ss_plat %>% filter(plat_type=="oligo") %>% write_csv(sprintf("data/01_sample_lists/%s_oligo_single_sex.csv", organism))
+ss_plat %>% filter(plat_type=="seq") %>% write_csv(sprintf("data/01_sample_lists/%s_seq_single_sex.csv", organism))
+
+
 
 ##### -------------- STOP ----------------- #####
 
